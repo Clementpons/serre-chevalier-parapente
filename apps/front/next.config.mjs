@@ -3,6 +3,10 @@ export default {
     // Le lint est vérifié par le hook pre-push (pnpm check), pas pendant le build
     ignoreDuringBuilds: true,
   },
+  typescript: {
+    // Le typecheck est vérifié par le hook pre-push (pnpm check), pas pendant le build
+    ignoreBuildErrors: true,
+  },
   async rewrites() {
     return [
       {
