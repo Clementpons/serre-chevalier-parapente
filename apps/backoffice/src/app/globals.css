@@ -1,0 +1,159 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ── Content area ────────────────────────────────────── */
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.6rem;
+
+    /* ── Chart colors ─────────────────────────────────────── */
+    --chart-1: 217 91% 55%;
+    --chart-2: 142 71% 45%;
+    --chart-3: 262 83% 58%;
+    --chart-4: 32 95% 58%;
+    --chart-5: 346 77% 55%;
+
+    /* ── Sidebar — dark ──────────────────────────────────── */
+    --sidebar-background: 240 6% 10%;
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 5% 17%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 4% 19%;
+    --sidebar-ring: 217 91% 60%;
+  }
+
+  .dark {
+    /* ── Content area ────────────────────────────────────── */
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 14%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 14%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 223 47% 20%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 217 91% 60%;
+
+    /* ── Chart colors ─────────────────────────────────────── */
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+
+    /* ── Sidebar — dark mode ─────────────────────────────── */
+    --sidebar-background: 222 47% 13%;
+    --sidebar-foreground: 210 40% 90%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 33% 19%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 17%;
+    --sidebar-ring: 217 91% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* ── Sidebar scrollbar: left side, thin ──────────────────────────────────── */
+[data-sidebar="content"] {
+  direction: rtl;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+[data-sidebar="content"] > * {
+  direction: ltr;
+}
+[data-sidebar="content"]::-webkit-scrollbar {
+  width: 3px;
+}
+[data-sidebar="content"]::-webkit-scrollbar-track {
+  background: transparent;
+}
+[data-sidebar="content"]::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-radius: 99px;
+}
+[data-sidebar="content"]::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.22);
+}
+
+/* ── Active nav item: white tab fusing with content area ─────────────────── */
+
+/* White background, no right radius */
+[data-sidebar="menu-button"][data-active="true"] {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  border-radius: var(--radius) 0 0 var(--radius) !important;
+  font-weight: 500;
+}
+[data-sidebar="menu-button"][data-active="true"]:hover {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Fill the SidebarGroup's right padding gap so the white bleeds to the sidebar edge */
+[data-sidebar="menu-item"]:has([data-active="true"]) {
+  position: relative;
+  z-index: 1;
+}
+[data-sidebar="menu-item"]:has([data-active="true"])::after {
+  content: "";
+  position: absolute;
+  right: -8px;
+  top: 0;
+  bottom: 0;
+  width: 9px;
+  background-color: hsl(var(--background));
+  pointer-events: none;
+}
+
+/* Don't apply bleed effect in collapsed (icon) mode */
+[data-sidebar="sidebar"][data-state="collapsed"] [data-sidebar="menu-item"]:has([data-active="true"])::after {
+  display: none;
+}
+[data-sidebar="sidebar"][data-state="collapsed"] [data-sidebar="menu-button"][data-active="true"] {
+  border-radius: var(--radius) !important;
+  background-color: hsl(var(--sidebar-accent)) !important;
+  color: hsl(var(--sidebar-accent-foreground)) !important;
+}

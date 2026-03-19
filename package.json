@@ -1,0 +1,17 @@
+{
+  "name": "serreche-chevalier-parapente",
+  "private": true,
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "db:generate": "turbo run db:generate --filter=serreche-parapente-backoffice",
+    "db:migrate": "turbo run db:migrate --filter=serreche-parapente-backoffice",
+    "db:studio": "turbo run db:studio --filter=serreche-parapente-backoffice"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.4"
+  },
+  "packageManager": "pnpm@9.15.4"
+}

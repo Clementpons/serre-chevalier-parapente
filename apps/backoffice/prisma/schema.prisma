@@ -1,0 +1,874 @@
+// =============================================================================
+// Prisma Schema — Serre Chevalier Parapente
+// =============================================================================
+// Sections :
+//   1. Generator & Datasource
+//   2. Enums
+//   3. Auth & Utilisateurs (better-auth)
+//   4. Activités (Stages, Baptêmes)
+//   5. Réservations (StageBooking, BaptemeBooking)
+//   6. Clients & Stagiaires
+//   7. Tarifs & Pricing
+//   8. Panier & Réservations Temporaires
+//   9. Commandes & Paiements
+//  10. Bons Cadeaux (Gift Vouchers)
+//  11. Codes Promo
+//  12. Marketing SMS (Audiences, Campagnes)
+//  13. Contenu Site Web
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// 1. Generator & Datasource
+// -----------------------------------------------------------------------------
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// -----------------------------------------------------------------------------
+// 2. Enums
+// -----------------------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  MONITEUR
+  CUSTOMER
+}
+
+enum StageType {
+  INITIATION
+  PROGRESSION
+  AUTONOMIE
+  DOUBLE
+}
+
+enum StageBookingType {
+  INITIATION
+  PROGRESSION
+  AUTONOMIE
+}
+
+enum BaptemeCategory {
+  AVENTURE
+  DUREE
+  LONGUE_DUREE
+  ENFANT
+  HIVER
+}
+
+enum CartItemType {
+  STAGE
+  BAPTEME
+  GIFT_VOUCHER
+}
+
+enum DiscountType {
+  FIXED
+  PERCENTAGE
+}
+
+enum AudienceRuleType {
+  CLIENT_RESERVED_STAGE
+  CLIENT_RESERVED_BAPTEME
+  STAGIAIRE_STAGE
+  STAGIAIRE_BAPTEME
+  PURCHASED_GIFT_VOUCHER
+  ORDER_ABOVE_AMOUNT
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  COMPLETED
+  FAILED
+}
+
+enum SmsStatus {
+  ACCEPTED
+  QUEUED
+  SENDING
+  SENT
+  DELIVERED
+  UNDELIVERED
+  FAILED
+}
+
+enum VoucherProductType {
+  STAGE
+  BAPTEME
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  PARTIALLY_PAID
+  FULLY_PAID
+  CONFIRMED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum ManualPaymentMethod {
+  CARD
+  BANK_TRANSFER
+  CASH
+  CHECK
+}
+
+enum PaymentType {
+  STRIPE
+  MANUAL
+  GIFT_VOUCHER
+}
+
+// -----------------------------------------------------------------------------
+// 3. Auth & Utilisateurs (better-auth)
+// -----------------------------------------------------------------------------
+
+model User {
+  id            String   @id
+  email         String   @unique
+  name          String
+  emailVerified Boolean  @default(false)
+  image         String?
+  avatarUrl     String?
+  role          Role     @default(CUSTOMER)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions Session[]
+  accounts Account[]
+
+  stageMoniteurs   StageMoniteur[]   @relation("StageMoniteurs")
+  baptemeMoniteurs BaptemeMoniteur[] @relation("BaptemeMoniteurs")
+
+  recordedPayments Payment[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("verification")
+}
+
+// -----------------------------------------------------------------------------
+// 4. Activités
+// -----------------------------------------------------------------------------
+
+// Créneau de stage de parapente
+model Stage {
+  id           String    @id @default(cuid())
+  startDate    DateTime
+  duration     Int       @default(7) // durée en jours
+  places       Int       @default(6)
+  price        Float     @default(350.0)
+  acomptePrice Float     @default(100.0)
+  type         StageType @default(INITIATION)
+
+  // Promotion (remplace allTimeHighPrice)
+  promotionOriginalPrice Float? // prix barré affiché si promo active
+  promotionEndDate       DateTime? // expiration auto de la promo
+  promotionReason        String? // label interne (ex: "Promo printemps 2026")
+
+  moniteurs             StageMoniteur[]
+  bookings              StageBooking[]
+  cartItems             CartItem[]
+  orderItems            OrderItem[]
+  temporaryReservations TemporaryReservation[]
+  promotionHistory      StagePromotionHistory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Historique des promotions appliquées sur un stage
+model StagePromotionHistory {
+  id      String @id @default(cuid())
+  stageId String
+  stage   Stage  @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  originalPrice Float
+  promotedPrice Float
+  discountPercent Float
+  reason        String?
+  endDate       DateTime?
+  appliedBy     String? // ID de l'admin qui a appliqué la promo
+
+  appliedAt DateTime @default(now())
+
+  @@index([stageId])
+}
+
+// Table de liaison moniteurs ↔ stages
+model StageMoniteur {
+  id         String @id @default(cuid())
+  stageId    String
+  moniteurId String
+  stage      Stage  @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  moniteur   User   @relation("StageMoniteurs", fields: [moniteurId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([stageId, moniteurId])
+}
+
+// Créneau de baptême biplace
+// Note: plusieurs baptêmes peuvent avoir lieu le même jour (contrainte @unique supprimée)
+model Bapteme {
+  id           String            @id @default(cuid())
+  date         DateTime
+  duration     Int               @default(120) // durée en minutes
+  places       Int               @default(6)
+  categories   BaptemeCategory[] // catégories disponibles sur ce créneau
+  acomptePrice Float             @default(35.0)
+
+  moniteurs             BaptemeMoniteur[]
+  bookings              BaptemeBooking[]
+  cartItems             CartItem[]
+  orderItems            OrderItem[]
+  temporaryReservations TemporaryReservation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Table de liaison moniteurs ↔ baptêmes
+model BaptemeMoniteur {
+  id         String  @id @default(cuid())
+  baptemeId  String
+  moniteurId String
+  bapteme    Bapteme @relation(fields: [baptemeId], references: [id], onDelete: Cascade)
+  moniteur   User    @relation("BaptemeMoniteurs", fields: [moniteurId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([baptemeId, moniteurId])
+}
+
+// -----------------------------------------------------------------------------
+// 5. Réservations
+// -----------------------------------------------------------------------------
+
+// Réservation confirmée d'un stage (post-paiement)
+model StageBooking {
+  id          String           @id @default(cuid())
+  shortCode   String?          @unique // ex: SCP-X3K9 — généré à la création
+  type        StageBookingType @default(INITIATION)
+  stageId     String
+  stage       Stage            @relation(fields: [stageId], references: [id])
+  stagiaireId String
+  stagiaire   Stagiaire        @relation(fields: [stagiaireId], references: [id])
+
+  orderItem OrderItem?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([stageId])
+  @@index([stagiaireId])
+}
+
+// Réservation confirmée d'un baptême (post-paiement)
+model BaptemeBooking {
+  id          String          @id @default(cuid())
+  shortCode   String?         @unique // ex: SCP-Y7M2 — généré à la création
+  baptemeId   String
+  bapteme     Bapteme         @relation(fields: [baptemeId], references: [id])
+  stagiaireId String
+  stagiaire   Stagiaire       @relation(fields: [stagiaireId], references: [id])
+  category    BaptemeCategory
+  hasVideo    Boolean         @default(false)
+
+  orderItem OrderItem?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([baptemeId])
+  @@index([stagiaireId])
+}
+
+// -----------------------------------------------------------------------------
+// 6. Clients & Stagiaires
+// -----------------------------------------------------------------------------
+
+// Client = la personne qui paie la commande
+model Client {
+  id         String @id @default(cuid())
+  firstName  String
+  lastName   String
+  email      String @unique // toujours requis (collecté au checkout)
+  phone      String
+  address    String
+  postalCode String
+  city       String
+  country    String
+
+  // Consentement RGPD (collecté au checkout)
+  rgpdConsentAt DateTime?
+  rgpdConsentIp String?
+
+  orders       Order[]
+  giftVouchers GiftVoucher[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+}
+
+// Stagiaire = la personne qui participe à l'activité (peut être différente du client)
+model Stagiaire {
+  id        String    @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String
+  phone     String
+  birthDate DateTime?
+  weight    Float
+  height    Float
+
+  // Consentement RGPD (collecté au checkout)
+  rgpdConsentAt DateTime?
+  rgpdConsentIp String?
+
+  stageBookings   StageBooking[]
+  baptemeBookings BaptemeBooking[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+}
+
+// -----------------------------------------------------------------------------
+// 7. Tarifs & Pricing
+// -----------------------------------------------------------------------------
+
+// Prix par catégorie de baptême
+model BaptemeCategoryPrice {
+  id       String          @id @default(cuid())
+  category BaptemeCategory @unique
+  price    Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Prix de l'option vidéo pour les baptêmes
+model VideoOptionPrice {
+  id    String @id @default(cuid())
+  price Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Acompte par défaut pour les baptêmes
+model BaptemeDepositPrice {
+  id    String @id @default(cuid())
+  price Float  @default(35.0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Prix de base des stages par type + acompte par défaut par type
+model StageBasePrice {
+  id        String    @id @default(cuid())
+  stageType StageType @unique
+  price     Float
+
+  // Acompte par défaut pour ce type de stage (pré-rempli à la création d'un stage)
+  defaultAcomptePrice Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// -----------------------------------------------------------------------------
+// 8. Panier & Réservations Temporaires
+// -----------------------------------------------------------------------------
+
+// Session anonyme (stockée côté client dans localStorage)
+model CartSession {
+  id        String   @id @default(cuid())
+  sessionId String   @unique // UUID généré côté client
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cartItems CartItem[]
+
+  @@index([expiresAt])
+  @@index([sessionId])
+}
+
+// Article dans le panier
+model CartItem {
+  id       String       @id @default(cuid())
+  type     CartItemType
+  quantity Int          @default(1)
+
+  stageId String?
+  stage   Stage?  @relation(fields: [stageId], references: [id])
+
+  baptemeId String?
+  bapteme   Bapteme? @relation(fields: [baptemeId], references: [id])
+
+  // Pour les bons cadeaux à acheter (type GIFT_VOUCHER)
+  giftVoucherCode   String? // code utilisé (utilisation d'un bon existant)
+  giftVoucherAmount Float? // montant du bon à acheter
+
+  // Données du participant (temporaires, avant paiement)
+  participantData Json // {firstName, lastName, email, phone, weight, height, birthDate?}
+
+  cartSessionId String
+  cartSession   CartSession @relation(fields: [cartSessionId], references: [id], onDelete: Cascade)
+
+  expiresAt DateTime? // 1h pour STAGE/BAPTEME, null pour GIFT_VOUCHER
+  isExpired Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([cartSessionId])
+  @@index([expiresAt])
+  @@index([isExpired])
+}
+
+// Réservation temporaire (bloque une place pendant que le client est dans le tunnel d'achat)
+model TemporaryReservation {
+  id        String @id @default(cuid())
+  sessionId String
+
+  stageId String?
+  stage   Stage?  @relation(fields: [stageId], references: [id])
+
+  baptemeId String?
+  bapteme   Bapteme? @relation(fields: [baptemeId], references: [id])
+
+  quantity  Int      @default(1)
+  expiresAt DateTime // 15 minutes par défaut
+
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+  @@index([sessionId])
+}
+
+// -----------------------------------------------------------------------------
+// 9. Commandes & Paiements
+// -----------------------------------------------------------------------------
+
+// Commande principale
+model Order {
+  id          String      @id @default(cuid())
+  orderNumber String      @unique // format: ORD-YYYY-XXXXXX
+  status      OrderStatus @default(PENDING)
+
+  subtotal       Float
+  discountAmount Float @default(0.0) // réduction bon cadeau
+  totalAmount    Float
+
+  // Code promo appliqué
+  promoCodeId         String?
+  promoCode           PromoCode? @relation(fields: [promoCodeId], references: [id])
+  promoDiscountAmount Float      @default(0.0)
+
+  // Client (optionnel jusqu'au paiement — ghost orders)
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id])
+
+  orderItems     OrderItem[]
+  payments       Payment[]
+  promoCodeUsage PromoCodeUsage?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderNumber])
+  @@index([clientId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Article d'une commande
+model OrderItem {
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  type       CartItemType
+  quantity   Int          @default(1)
+  unitPrice  Float
+  totalPrice Float
+
+  stageId String?
+  stage   Stage?  @relation(fields: [stageId], references: [id])
+
+  baptemeId String?
+  bapteme   Bapteme? @relation(fields: [baptemeId], references: [id])
+
+  // Pour les bons cadeaux achetés
+  giftVoucherAmount      Float?
+  generatedGiftVoucherId String?      @unique
+  generatedGiftVoucher   GiftVoucher? @relation("GeneratedVoucher", fields: [generatedGiftVoucherId], references: [id])
+
+  usedGiftVoucherId String?      @unique
+  usedGiftVoucher   GiftVoucher? @relation("UsedVoucher", fields: [usedGiftVoucherId], references: [id])
+
+  participantData Json // {firstName, lastName, email, phone, weight, height, birthDate?}
+
+  // Gestion des acomptes et soldes
+  depositAmount            Float? // acompte original
+  remainingAmount          Float? // solde original
+  isFullyPaid              Boolean   @default(false)
+  finalPaymentDate         DateTime?
+  finalPaymentNote         String?
+  discountAmount           Float     @default(0.0) // portion de réduction allouée à cet item
+  effectiveDepositAmount   Float? // acompte réel après réduction (encaissé en ligne)
+  effectiveRemainingAmount Float? // solde réel après réduction (encaissé sur place)
+
+  // Réduction finale (geste commercial post-activité, non comptabilisée dans le CA)
+  finalDiscountAmount Float?
+  finalDiscountNote   String?
+  finalDiscountDate   DateTime?
+
+  // Réservations créées (post-paiement)
+  stageBookingId String?       @unique
+  stageBooking   StageBooking? @relation(fields: [stageBookingId], references: [id])
+
+  baptemeBookingId String?         @unique
+  baptemeBooking   BaptemeBooking? @relation(fields: [baptemeBookingId], references: [id])
+
+  paymentAllocations PaymentAllocation[]
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+}
+
+// Répartition d'un paiement entre plusieurs OrderItems
+model PaymentAllocation {
+  id          String    @id @default(cuid())
+  paymentId   String
+  payment     Payment   @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  orderItemId String
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  allocatedAmount Float
+
+  createdAt DateTime @default(now())
+
+  @@unique([paymentId, orderItemId])
+  @@index([paymentId])
+  @@index([orderItemId])
+}
+
+// Paiement (Stripe ou manuel)
+model Payment {
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id])
+
+  paymentType PaymentType @default(STRIPE)
+
+  stripePaymentIntentId String?       @unique
+  status                PaymentStatus @default(PENDING)
+  amount                Float
+  currency              String        @default("eur")
+  stripeMetadata        Json?
+
+  isManual            Boolean              @default(false)
+  manualPaymentMethod ManualPaymentMethod?
+  manualPaymentNote   String?
+  recordedBy          String?
+  recordedByUser      User?                @relation(fields: [recordedBy], references: [id])
+
+  allocations PaymentAllocation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([stripePaymentIntentId])
+  @@index([status, createdAt])
+  @@index([status, isManual, createdAt])
+  @@index([status, paymentType, createdAt])
+}
+
+// Idempotence des webhooks Stripe
+model ProcessedWebhookEvent {
+  id            String   @id @default(cuid())
+  stripeEventId String   @unique // evt_xxx
+  eventType     String
+  orderId       String? // pour le débogage
+  processedAt   DateTime @default(now())
+
+  @@index([stripeEventId])
+  @@index([eventType])
+}
+
+// -----------------------------------------------------------------------------
+// 10. Bons Cadeaux (Gift Vouchers)
+// -----------------------------------------------------------------------------
+
+// Bon cadeau = une place gratuite pour une activité précise, validité 1 an
+model GiftVoucher {
+  id   String @id @default(cuid())
+  code String @unique // format: GVSCP-XXXXXXXX-XXXX
+
+  productType     VoucherProductType
+  stageCategory   StageBookingType? // si productType = STAGE
+  baptemeCategory BaptemeCategory? // si productType = BAPTEME
+
+  purchasePrice Float // snapshot prix au moment de l'achat
+
+  isUsed Boolean   @default(false)
+  usedAt DateTime?
+
+  recipientName  String
+  recipientEmail String
+
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id])
+
+  expiryDate DateTime
+
+  // Réservation temporaire (empêche utilisation concurrente)
+  reservedBySessionId String?
+  reservedAt          DateTime?
+
+  generatedFromOrderItem OrderItem? @relation("GeneratedVoucher")
+  usedInOrderItem        OrderItem? @relation("UsedVoucher")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([code])
+  @@index([isUsed])
+  @@index([reservedBySessionId])
+  @@index([expiryDate])
+}
+
+// -----------------------------------------------------------------------------
+// 11. Codes Promo
+// -----------------------------------------------------------------------------
+
+model PromoCode {
+  id            String  @id @default(cuid())
+  code          String  @unique
+  label         String? // label interne (ex: "Promo hiver 2026")
+  recipientNote String? // note informative (ex: "Pour M. Dupont")
+
+  discountType      DiscountType
+  discountValue     Float // montant € ou % (ex: 20.0)
+  maxDiscountAmount Float? // plafond (requis si PERCENTAGE)
+
+  minCartAmount         Float? // montant minimum du panier
+  maxUses               Int? // null = illimité
+  currentUses           Int          @default(0)
+  applicableProductTypes CartItemType[] @default([]) // [] = applicable à tout
+
+  expiryDate DateTime?
+  isActive   Boolean   @default(true)
+
+  campaignId String?
+
+  usages PromoCodeUsage[]
+  orders Order[]
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  smsCampaign SmsCampaign? @relation(fields: [campaignId], references: [id])
+
+  @@index([code])
+  @@index([isActive])
+}
+
+// Traçabilité des utilisations de codes promo
+model PromoCodeUsage {
+  id              String    @id @default(cuid())
+  promoCodeId     String
+  promoCode       PromoCode @relation(fields: [promoCodeId], references: [id])
+  orderId         String    @unique
+  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  discountApplied Float // montant réellement déduit
+  createdAt       DateTime  @default(now())
+
+  @@index([promoCodeId])
+}
+
+// -----------------------------------------------------------------------------
+// 12. Marketing SMS
+// -----------------------------------------------------------------------------
+
+// Segment de contacts ciblés pour les campagnes
+model Audience {
+  id          String            @id @default(cuid())
+  name        String
+  description String?
+  rules       AudienceRule[]
+  contacts    AudienceContact[] // contacts ajoutés manuellement
+  campaigns   SmsCampaign[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+// Règle de filtrage dynamique d'une audience
+model AudienceRule {
+  id         String           @id @default(cuid())
+  audienceId String
+  audience   Audience         @relation(fields: [audienceId], references: [id], onDelete: Cascade)
+  ruleType   AudienceRuleType
+
+  stageType       StageBookingType?
+  baptemeCategory BaptemeCategory?
+  minOrderAmount  Float?
+
+  dateFrom DateTime?
+  dateTo   DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([audienceId])
+}
+
+// Contact ajouté manuellement dans une audience
+model AudienceContact {
+  id         String   @id @default(cuid())
+  audienceId String
+  audience   Audience @relation(fields: [audienceId], references: [id], onDelete: Cascade)
+  phone      String
+  name       String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([audienceId, phone])
+  @@index([audienceId])
+}
+
+// Campagne SMS
+model SmsCampaign {
+  id          String         @id @default(cuid())
+  name        String
+  content     String
+  status      CampaignStatus @default(DRAFT)
+  scheduledAt DateTime?
+  sentAt      DateTime?
+
+  audiences Audience[]
+
+  // Paramètres de génération de codes promo à l'envoi
+  generatePromoCode      Boolean       @default(false)
+  promoDiscountType      DiscountType?
+  promoDiscountValue     Float?
+  promoMaxDiscountAmount Float?
+  promoMinCartAmount     Float?
+  promoMaxUses           Int?
+  promoExpiryDate        DateTime?
+
+  promoCodes PromoCode[]
+  logs       SmsCampaignLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+// Suivi d'envoi individuel par destinataire
+model SmsCampaignLog {
+  id         String      @id @default(cuid())
+  campaignId String
+  campaign   SmsCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  recipientPhone String
+  recipientName  String?
+
+  messageSid   String?
+  status       SmsStatus @default(QUEUED)
+  errorMessage String?
+
+  sentAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([campaignId])
+  @@index([status])
+}
+
+// -----------------------------------------------------------------------------
+// 13. Contenu Site Web
+// -----------------------------------------------------------------------------
+
+// Bandeau d'information en haut du site public
+model TopBar {
+  id            String  @id @default(cuid())
+  isActive      Boolean @default(false)
+  title         String
+  secondaryText String?
+  ctaTitle      String?
+  ctaLink       String?
+  ctaIsFull     Boolean @default(false)
+  ctaIsExternal Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

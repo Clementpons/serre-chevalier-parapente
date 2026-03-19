@@ -1,0 +1,1651 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Serre-Chevalier Parapente — API Reference</title>
+<style>
+  :root {
+    --blue: #2563eb;
+    --green: #16a34a;
+    --orange: #ea580c;
+    --red: #dc2626;
+    --purple: #7c3aed;
+    --gray: #6b7280;
+    --bg: #f9fafb;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --text: #111827;
+    --muted: #6b7280;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+  /* Layout */
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+  header { background: var(--blue); color: white; padding: 20px 0; margin-bottom: 32px; }
+  header h1 { font-size: 22px; font-weight: 700; }
+  header p { opacity: .8; font-size: 13px; margin-top: 4px; }
+
+  /* Sections */
+  .section { margin-bottom: 40px; }
+  .section-title {
+    font-size: 16px; font-weight: 700; border-bottom: 2px solid var(--border);
+    padding-bottom: 8px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+  }
+
+  /* Cards */
+  .route { background: var(--card); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
+  .route-header {
+    display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px;
+    cursor: pointer; user-select: none;
+  }
+  .route-header:hover { background: #f3f4f6; }
+  .route-body { padding: 0 16px 16px; border-top: 1px solid var(--border); background: #fafafa; }
+
+  /* Method badges */
+  .method {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 700; min-width: 52px; text-align: center;
+    font-family: monospace; flex-shrink: 0; margin-top: 2px;
+  }
+  .GET    { background: #dcfce7; color: #15803d; }
+  .POST   { background: #dbeafe; color: #1d4ed8; }
+  .PUT    { background: #fef9c3; color: #a16207; }
+  .PATCH  { background: #fae8ff; color: #9333ea; }
+  .DELETE { background: #fee2e2; color: #dc2626; }
+
+  /* Auth badges */
+  .auth {
+    display: inline-block; padding: 1px 6px; border-radius: 10px;
+    font-size: 10px; font-weight: 600; margin-left: 6px; vertical-align: middle;
+  }
+  .auth-public  { background: #e0f2fe; color: #0369a1; }
+  .auth-session { background: #f0fdf4; color: #166534; }
+  .auth-monitor { background: #fef3c7; color: #92400e; }
+  .auth-admin   { background: #fee2e2; color: #991b1b; }
+  .auth-hybrid  { background: #f5f3ff; color: #5b21b6; }
+
+  .path { font-family: monospace; font-weight: 600; font-size: 13px; color: var(--text); flex: 1; }
+  .desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .route-header-text { flex: 1; }
+
+  /* Details */
+  .detail-block { margin-top: 12px; }
+  .detail-block h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+  .param-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .param-table th { text-align: left; padding: 4px 8px; background: #f3f4f6; font-weight: 600; }
+  .param-table td { padding: 4px 8px; border-top: 1px solid var(--border); }
+  .required { color: var(--red); font-weight: 700; }
+  .optional { color: var(--gray); }
+  code { background: #f3f4f6; padding: 1px 5px; border-radius: 3px; font-family: monospace; font-size: 12px; }
+  pre { background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 12px; line-height: 1.6; margin-top: 6px; }
+
+  /* Nav */
+  nav { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+  nav a {
+    padding: 4px 12px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 20px; font-size: 12px; font-weight: 500; text-decoration: none;
+    color: var(--text);
+  }
+  nav a:hover { background: var(--blue); color: white; border-color: var(--blue); }
+
+  /* Legend */
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 24px; font-size: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 4px; }
+
+  details > summary { list-style: none; }
+  details > summary::-webkit-details-marker { display: none; }
+  .chevron { font-size: 11px; margin-left: auto; color: var(--muted); transition: transform .2s; }
+  details[open] .chevron { transform: rotate(90deg); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <h1>📋 Serre-Chevalier Parapente — API Reference</h1>
+    <p>Base URL: <code style="background:rgba(255,255,255,.2);color:white">/api</code> — All responses: <code style="background:rgba(255,255,255,.2);color:white">{ success, data?, message? }</code></p>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Legend -->
+  <div class="legend">
+    <strong>Auth :</strong>
+    <span class="legend-item"><span class="auth auth-public">public</span> x-api-key header requis</span>
+    <span class="legend-item"><span class="auth auth-session">session</span> Session connectée</span>
+    <span class="legend-item"><span class="auth auth-monitor">monitor+</span> Rôle MONITEUR ou ADMIN</span>
+    <span class="legend-item"><span class="auth auth-admin">admin</span> Rôle ADMIN uniquement</span>
+    <span class="legend-item"><span class="auth auth-hybrid">hybrid</span> x-api-key OU session</span>
+  </div>
+
+  <!-- Nav -->
+  <nav>
+    <a href="#stages">Stages</a>
+    <a href="#baptemes">Baptêmes</a>
+    <a href="#tarifs">Tarifs</a>
+    <a href="#availability">Disponibilités</a>
+    <a href="#cart">Panier</a>
+    <a href="#orders">Commandes</a>
+    <a href="#reservations">Réservations</a>
+    <a href="#payments">Paiements</a>
+    <a href="#giftvouchers">Bons Cadeaux</a>
+    <a href="#promocodes">Codes Promo</a>
+    <a href="#clients">Clients</a>
+    <a href="#stagiaires">Stagiaires</a>
+    <a href="#users">Utilisateurs</a>
+    <a href="#audiences">Audiences</a>
+    <a href="#campaigns">Campagnes SMS</a>
+    <a href="#dashboard">Dashboard</a>
+    <a href="#content">Contenu</a>
+  </nav>
+
+  <!-- STAGES -->
+  <div class="section" id="stages">
+    <div class="section-title">🪂 Stages <code>/api/stages</code></div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/stages <span class="auth auth-public">public</span></div>
+            <div class="desc">Liste tous les stages enrichis (places disponibles, moniteurs)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Query params (optionnels)</h4>
+            <table class="param-table">
+              <tr><th>Param</th><th>Type</th><th>Description</th></tr>
+              <tr><td><code>moniteurId</code></td><td>string</td><td>Filtre par moniteur</td></tr>
+              <tr><td><code>date</code></td><td>ISO date</td><td>Filtre par date de début</td></tr>
+            </table>
+          </div>
+          <div class="detail-block">
+            <h4>Réponse 200</h4>
+            <pre>{ success: true, data: Stage[] }
+// Stage: { id, startDate, type, price, acomptePrice, duration, places,
+//          promotionOriginalPrice, promotionEndDate,
+//          availablePlaces, confirmedBookings, temporaryReservations,
+//          moniteurs: [{ moniteur: { id, name, role, avatarUrl } }] }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/stages/:id <span class="auth auth-session">session</span></div>
+            <div class="desc">Détail d'un stage avec toutes ses réservations et moniteurs</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Réponse 200</h4>
+            <pre>{ success: true, data: Stage & { bookings: StageBooking[], moniteurs: MoniteurOnStage[] } }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method POST">POST</span>
+          <div class="route-header-text">
+            <div class="path">/api/stages <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Crée un nouveau stage</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <table class="param-table">
+              <tr><th>Champ</th><th>Type</th><th>Requis</th><th>Description</th></tr>
+              <tr><td><code>startDate</code></td><td>ISO date</td><td class="required">✓</td><td>Date de début</td></tr>
+              <tr><td><code>duration</code></td><td>number</td><td class="required">✓</td><td>Durée en jours</td></tr>
+              <tr><td><code>places</code></td><td>number</td><td class="required">✓</td><td>Nombre de places</td></tr>
+              <tr><td><code>price</code></td><td>number</td><td class="required">✓</td><td>Prix total</td></tr>
+              <tr><td><code>acomptePrice</code></td><td>number</td><td class="required">✓</td><td>Montant de l'acompte</td></tr>
+              <tr><td><code>type</code></td><td>StageType</td><td class="required">✓</td><td>INITIATION | PROGRESSION | AUTONOMIE</td></tr>
+              <tr><td><code>moniteurIds</code></td><td>string[]</td><td class="required">✓</td><td>IDs des moniteurs assignés</td></tr>
+            </table>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method PUT">PUT</span>
+          <div class="route-header-text">
+            <div class="path">/api/stages/:id <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Met à jour un stage existant</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block"><h4>Body JSON</h4><p>Mêmes champs que POST.</p></div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method PATCH">PATCH</span>
+          <div class="route-header-text">
+            <div class="path">/api/stages/:id/promote <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Applique une promotion sur un stage</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <table class="param-table">
+              <tr><th>Champ</th><th>Type</th><th>Requis</th></tr>
+              <tr><td><code>newPrice</code></td><td>number</td><td class="required">✓</td></tr>
+              <tr><td><code>endDate</code></td><td>ISO date</td><td class="optional">–</td></tr>
+              <tr><td><code>reason</code></td><td>string</td><td class="optional">–</td></tr>
+            </table>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method DELETE">DELETE</span>
+          <div class="route-header-text">
+            <div class="path">/api/stages/:id/promote <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Annule la promotion d'un stage (restaure le prix original)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method DELETE">DELETE</span>
+          <div class="route-header-text">
+            <div class="path">/api/stages/:id <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Supprime un stage (bloqué si réservations existantes)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+  </div>
+
+  <!-- BAPTEMES -->
+  <div class="section" id="baptemes">
+    <div class="section-title">🦅 Baptêmes <code>/api/baptemes</code></div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/baptemes <span class="auth auth-hybrid">hybrid</span></div>
+            <div class="desc">Liste tous les créneaux de baptême enrichis</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Query params (optionnels)</h4>
+            <table class="param-table">
+              <tr><th>Param</th><th>Type</th></tr>
+              <tr><td><code>moniteurId</code></td><td>string</td></tr>
+              <tr><td><code>date</code></td><td>ISO date</td></tr>
+            </table>
+          </div>
+          <div class="detail-block">
+            <h4>Réponse 200</h4>
+            <pre>{ success: true, data: Bapteme[] }
+// Bapteme: { id, date, duration, places, categories, acomptePrice,
+//            availablePlaces, confirmedBookings, temporaryReservations,
+//            moniteurs: [{ moniteur: {...} }] }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/baptemes/:id <span class="auth auth-session">session</span></div>
+            <div class="desc">Détail d'un créneau avec réservations et moniteurs</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method POST">POST</span>
+          <div class="route-header-text">
+            <div class="path">/api/baptemes <span class="auth auth-monitor">monitor+</span></div>
+            <div class="desc">Crée un créneau de baptême. Un moniteur ne peut créer que pour lui-même.</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <table class="param-table">
+              <tr><th>Champ</th><th>Type</th><th>Requis</th></tr>
+              <tr><td><code>date</code></td><td>ISO date</td><td class="required">✓</td></tr>
+              <tr><td><code>duration</code></td><td>number</td><td class="required">✓</td></tr>
+              <tr><td><code>places</code></td><td>number</td><td class="required">✓</td></tr>
+              <tr><td><code>categories</code></td><td>BaptemeCategory[]</td><td class="required">✓</td></tr>
+              <tr><td><code>acomptePrice</code></td><td>number</td><td class="required">✓</td></tr>
+              <tr><td><code>moniteurIds</code></td><td>string[]</td><td class="required">✓</td></tr>
+            </table>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method PUT">PUT</span>
+          <div class="route-header-text">
+            <div class="path">/api/baptemes/:id <span class="auth auth-monitor">monitor+</span></div>
+            <div class="desc">Met à jour un créneau (contrôles RBAC moniteur)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"><div class="detail-block"><p>Mêmes champs que POST.</p></div></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method DELETE">DELETE</span>
+          <div class="route-header-text">
+            <div class="path">/api/baptemes/:id <span class="auth auth-monitor">monitor+</span></div>
+            <div class="desc">Supprime un créneau (bloqué si réservations existantes)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+  </div>
+
+  <!-- TARIFS -->
+  <div class="section" id="tarifs">
+    <div class="section-title">💶 Tarifs <code>/api/tarifs</code></div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/tarifs/all <span class="auth auth-public">public</span></div>
+            <div class="desc">⭐ Endpoint consolidé — toutes les données tarifaires en un seul appel</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Réponse 200</h4>
+            <pre>{ success: true, data: {
+  baptemeCategories: BaptemeCategoryPrice[],  // { category, price }
+  videoOption: VideoOptionPrice,              // { price }
+  stagePrices: StageBasePrice[],             // { stageType, price }
+  deposit: BaptemeDepositPrice               // { price }
+}}</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/tarifs/min <span class="auth auth-public">public</span></div>
+            <div class="desc">Prix minimum d'un type d'activité (avec cache 24h)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Query params</h4>
+            <table class="param-table">
+              <tr><th>Param</th><th>Type</th><th>Requis</th><th>Valeurs</th></tr>
+              <tr><td><code>type</code></td><td>string</td><td class="required">✓</td><td>STAGE | BAPTEME</td></tr>
+              <tr><td><code>subType</code></td><td>string</td><td class="optional">–</td><td>StageType ou BaptemeCategory</td></tr>
+            </table>
+          </div>
+          <div class="detail-block">
+            <h4>Réponse 200</h4>
+            <pre>{ success: true, data: { minPrice: number | null, currency: "EUR" } }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/tarifs <span class="auth auth-session">session</span></div>
+            <div class="desc">Liste les prix par catégorie de baptême</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/tarifs/by-category/:category <span class="auth auth-session">session</span></div>
+            <div class="desc">Tarif pour une catégorie de baptême</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method PUT">PUT</span>
+          <div class="route-header-text">
+            <div class="path">/api/tarifs <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Met à jour le prix d'une catégorie de baptême (upsert)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <table class="param-table">
+              <tr><th>Champ</th><th>Type</th><th>Requis</th></tr>
+              <tr><td><code>category</code></td><td>BaptemeCategory</td><td class="required">✓</td></tr>
+              <tr><td><code>price</code></td><td>number</td><td class="required">✓</td></tr>
+            </table>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/tarifs/video-option <span class="auth auth-session">session</span></div>
+            <div class="desc">Prix de l'option vidéo pour les baptêmes</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method PUT">PUT</span>
+          <div class="route-header-text">
+            <div class="path">/api/tarifs/video-option <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Met à jour le prix de l'option vidéo</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <pre>{ price: number }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/tarifs/stages/base <span class="auth auth-session">session</span></div>
+            <div class="desc">Prix de base par type de stage</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method PUT">PUT</span>
+          <div class="route-header-text">
+            <div class="path">/api/tarifs/stages/base <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Met à jour le prix de base d'un type de stage</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <pre>{ stageType: StageType, price: number }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/tarifs/baptemes/deposit <span class="auth auth-session">session</span></div>
+            <div class="desc">Prix de l'acompte par défaut pour les baptêmes</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method PUT">PUT</span>
+          <div class="route-header-text">
+            <div class="path">/api/tarifs/baptemes/deposit <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Met à jour le prix de l'acompte baptême par défaut</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <pre>{ price: number }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- AVAILABILITY -->
+  <div class="section" id="availability">
+    <div class="section-title">📅 Disponibilités <code>/api/availability</code></div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method POST">POST</span>
+          <div class="route-header-text">
+            <div class="path">/api/availability/check <span class="auth auth-public">public</span></div>
+            <div class="desc">Vérifie la disponibilité d'un stage ou baptême</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <pre>{ type: "stage" | "bapteme", itemId: string, quantity?: number }</pre>
+          </div>
+          <div class="detail-block">
+            <h4>Réponse 200</h4>
+            <pre>{ success: true, data: { available: boolean, reason?: string, availablePlaces: number } }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/availability/stages/:id <span class="auth auth-public">public</span></div>
+            <div class="desc">Disponibilité d'un stage spécifique</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/availability/baptemes/:id <span class="auth auth-public">public</span></div>
+            <div class="desc">Disponibilité d'un créneau de baptême</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/availability/months <span class="auth auth-public">public</span></div>
+            <div class="desc">Mois ayant des créneaux disponibles pour une année</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Query params</h4>
+            <pre>?type=stage|bapteme &amp;year=2026 [&amp;category=AVENTURE] [&amp;stageType=INITIATION|PROGRESSION|AUTONOMIE]</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/availability/periods <span class="auth auth-public">public</span></div>
+            <div class="desc">Périodes disponibles avec comptage des places (années + mois)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Query params</h4>
+            <pre>?type=stage|bapteme [&amp;category=AVENTURE] [&amp;stageType=INITIATION|PROGRESSION|AUTONOMIE]</pre>
+            <h4 style="margin-top:12px">Réponse 200</h4>
+            <pre>{ success: true, data: { years: [{year, count}], monthsByYear: { 2026: [{month, count}] } } }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- CART -->
+  <div class="section" id="cart">
+    <div class="section-title">🛒 Panier <code>/api/cart</code></div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/cart/items <span class="auth auth-public">public</span></div>
+            <div class="desc">Récupère les articles du panier (expire les anciens automatiquement). Headers requis: x-api-key + x-session-id</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Réponse 200</h4>
+            <pre>{ success: true, data: { items: CartItem[], totalAmount: number, itemCount: number } }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method POST">POST</span>
+          <div class="route-header-text">
+            <div class="path">/api/cart/items <span class="auth auth-public">public</span></div>
+            <div class="desc">Ajoute un article au panier (réservation temporaire 1h)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <table class="param-table">
+              <tr><th>Champ</th><th>Type</th><th>Requis</th></tr>
+              <tr><td><code>type</code></td><td>"STAGE" | "BAPTEME" | "GIFT_VOUCHER"</td><td class="required">✓</td></tr>
+              <tr><td><code>itemId</code></td><td>string</td><td>✓ sauf GIFT_VOUCHER</td></tr>
+              <tr><td><code>quantity</code></td><td>number</td><td class="optional">1</td></tr>
+              <tr><td><code>giftVoucherAmount</code></td><td>number</td><td>✓ si GIFT_VOUCHER</td></tr>
+              <tr><td><code>participantData</code></td><td>object</td><td class="required">✓</td></tr>
+            </table>
+            <h4 style="margin-top:12px">participantData pour STAGE/BAPTEME</h4>
+            <pre>{ firstName, lastName, email, phone, weight, height, birthDate?,
+  selectedCategory?,   // baptême: catégorie choisie
+  selectedStageType?,  // stage: type choisi
+  hasVideo?,          // baptême: option vidéo
+  usedGiftVoucherCode? // utilisation bon cadeau }</pre>
+            <h4 style="margin-top:12px">participantData pour GIFT_VOUCHER</h4>
+            <pre>{ voucherProductType, buyerName, buyerEmail, notifyRecipient,
+  recipientName, recipientEmail?, personalMessage? }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method PATCH">PATCH</span>
+          <div class="route-header-text">
+            <div class="path">/api/cart/items/:id <span class="auth auth-public">public</span></div>
+            <div class="desc">Met à jour un article du panier (merge des participantData)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <pre>{ quantity?: number, participantData?: Partial&lt;ParticipantData&gt; }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method DELETE">DELETE</span>
+          <div class="route-header-text">
+            <div class="path">/api/cart/items/:id <span class="auth auth-public">public</span></div>
+            <div class="desc">Supprime un article (libère la réservation temporaire)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method DELETE">DELETE</span>
+          <div class="route-header-text">
+            <div class="path">/api/cart/items <span class="auth auth-public">public</span></div>
+            <div class="desc">Vide entièrement le panier</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+  </div>
+
+  <!-- ORDERS -->
+  <div class="section" id="orders">
+    <div class="section-title">📦 Commandes <code>/api/orders</code></div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method POST">POST</span>
+          <div class="route-header-text">
+            <div class="path">/api/orders <span class="auth auth-public">public</span></div>
+            <div class="desc">Crée une commande depuis le panier. Gère le cas gratuit (bon cadeau) et le cas Stripe.</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <table class="param-table">
+              <tr><th>Champ</th><th>Type</th><th>Requis</th></tr>
+              <tr><td><code>customerEmail</code></td><td>string</td><td class="required">✓</td></tr>
+              <tr><td><code>customerData</code></td><td>object</td><td class="optional">–</td></tr>
+              <tr><td><code>promoCodeId</code></td><td>string</td><td class="optional">–</td></tr>
+            </table>
+          </div>
+          <div class="detail-block">
+            <h4>Réponse 200 — cas payant (Stripe)</h4>
+            <pre>{ success: true, data: {
+  order: { id, orderNumber, totalAmount, depositAmount, remainingAmount, ... },
+  paymentIntent: { id, clientSecret, amount },
+  requiresPayment: true,
+  remainingPayments: [...]
+}}</pre>
+          </div>
+          <div class="detail-block">
+            <h4>Réponse 200 — cas gratuit (bon cadeau)</h4>
+            <pre>{ success: true, data: { order: {...}, paymentIntent: null, requiresPayment: false } }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/orders/search?q= <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Recherche de commandes par numéro ou client (≥2 chars)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Réponse 200</h4>
+            <pre>{ success: true, data: Order[] } // max 10 résultats</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/orders/:id <span class="auth auth-public">public</span></div>
+            <div class="desc">Détail d'une commande par ID</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/orders <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Toutes les commandes (exclut PENDING &gt;6h)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method PATCH">PATCH</span>
+          <div class="route-header-text">
+            <div class="path">/api/orders/:id/status <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Met à jour le statut d'une commande</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <pre>{ status: "PENDING" | "PAID" | "PARTIALLY_PAID" | "FULLY_PAID" | "CANCELLED" | "REFUNDED" }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method POST">POST</span>
+          <div class="route-header-text">
+            <div class="path">/api/orders/items/:orderItemId/finalize <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Marque un item de commande comme entièrement payé (solde)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <pre>{ note?: string }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method DELETE">DELETE</span>
+          <div class="route-header-text">
+            <div class="path">/api/orders/ghost <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Supprime les commandes PENDING sans paiement &gt;24h</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Réponse 200</h4>
+            <pre>{ success: true, data: { deleted: number, orderNumbers: string[] } }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- RESERVATIONS -->
+  <div class="section" id="reservations">
+    <div class="section-title">📝 Réservations <code>/api/reservations</code> · <code>/api/reservationStages</code></div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/reservations <span class="auth auth-monitor">monitor+</span></div>
+            <div class="desc">Liste paginée des réservations avec filtres avancés</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Query params</h4>
+            <table class="param-table">
+              <tr><th>Param</th><th>Type</th><th>Défaut</th></tr>
+              <tr><td><code>page</code></td><td>number</td><td>1</td></tr>
+              <tr><td><code>limit</code></td><td>number</td><td>20</td></tr>
+              <tr><td><code>type</code></td><td>ALL | STAGE | BAPTEME</td><td>ALL</td></tr>
+              <tr><td><code>search</code></td><td>string</td><td>–</td></tr>
+              <tr><td><code>status</code></td><td>CSV de statuts</td><td>PAID,CONFIRMED,...</td></tr>
+              <tr><td><code>startDate</code></td><td>ISO date</td><td>–</td></tr>
+              <tr><td><code>endDate</code></td><td>ISO date</td><td>–</td></tr>
+              <tr><td><code>category</code></td><td>string</td><td>–</td></tr>
+            </table>
+          </div>
+          <div class="detail-block">
+            <h4>Réponse 200</h4>
+            <pre>{ success: true, data: { reservations: [...], pagination: {...}, stats: {...} } }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/reservations/:id <span class="auth auth-monitor">monitor+</span></div>
+            <div class="desc">Détail d'une réservation (stage ou baptême auto-détecté)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method POST">POST</span>
+          <div class="route-header-text">
+            <div class="path">/api/reservations/manual-payment <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Enregistre un paiement manuel (espèces, chèque, virement, CB)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <pre>{ orderItemId: string, amount: number,
+  paymentMethod: "CARD" | "BANK_TRANSFER" | "CASH" | "CHECK",
+  note?: string }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method POST">POST</span>
+          <div class="route-header-text">
+            <div class="path">/api/reservationStages <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Crée manuellement une réservation de stage (sans paiement)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <pre>{ customerId: string, stageId: string, type: StageBookingType }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- PAYMENTS -->
+  <div class="section" id="payments">
+    <div class="section-title">💳 Paiements <code>/api/payments</code></div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/payments <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Liste tous les paiements avec allocations et détails</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Réponse 200</h4>
+            <pre>{ success: true, data: Payment[] }
+// Payment: { id, amount, currency, status, isManual, paymentType,
+//            order: { client: {...} }, recordedByUser: {...},
+//            allocations: [{ orderItem: {...} }] }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- GIFT VOUCHERS -->
+  <div class="section" id="giftvouchers">
+    <div class="section-title">🎁 Bons Cadeaux <code>/api/giftvouchers</code></div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/giftvouchers <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Liste tous les bons cadeaux</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/giftvouchers/:id <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Détail d'un bon cadeau</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method POST">POST</span>
+          <div class="route-header-text">
+            <div class="path">/api/giftvouchers <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Crée un bon cadeau (admin — offert gratuitement). Format: GVSCP-XXXXXXXX-XXXX</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <pre>{ productType: "STAGE" | "BAPTEME",
+  stageCategory?: StageType,
+  baptemeCategory?: BaptemeCategory,
+  recipientName: string,
+  recipientEmail: string }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method POST">POST</span>
+          <div class="route-header-text">
+            <div class="path">/api/giftvouchers/lookup <span class="auth auth-public">public</span></div>
+            <div class="desc">Récupère les infos d'un bon cadeau par code</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <pre>{ code: string }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method POST">POST</span>
+          <div class="route-header-text">
+            <div class="path">/api/giftvouchers/validate <span class="auth auth-public">public</span></div>
+            <div class="desc">Valide l'utilisation d'un bon cadeau</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <pre>{ code: string, productType: string, category?: string }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/giftvouchers/price/:productType/:category <span class="auth auth-public">public</span></div>
+            <div class="desc">Prix d'un bon cadeau selon le type et la catégorie</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+  </div>
+
+  <!-- PROMO CODES -->
+  <div class="section" id="promocodes">
+    <div class="section-title">🏷️ Codes Promo <code>/api/promocodes</code></div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/promocodes <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Liste tous les codes promo</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method POST">POST</span>
+          <div class="route-header-text">
+            <div class="path">/api/promocodes <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Crée un code promo</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <pre>{ code: string, discountType: "FIXED" | "PERCENT",
+  discountValue: number, maxUses?: number,
+  expiryDate?: ISO, minCartAmount?: number,
+  maxDiscountAmount?: number }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method PUT">PUT</span>
+          <div class="route-header-text">
+            <div class="path">/api/promocodes/:id <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Met à jour un code promo</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method DELETE">DELETE</span>
+          <div class="route-header-text">
+            <div class="path">/api/promocodes/:id <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Supprime un code promo</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method POST">POST</span>
+          <div class="route-header-text">
+            <div class="path">/api/promocodes/validate <span class="auth auth-public">public</span></div>
+            <div class="desc">Valide et calcule la réduction d'un code promo</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <pre>{ code: string, cartAmount: number }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- CLIENTS -->
+  <div class="section" id="clients">
+    <div class="section-title">👤 Clients <code>/api/clients</code></div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/clients <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Liste paginée avec recherche et tri</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Query params</h4>
+            <pre>page, pageSize, sortBy (name|createdAt|orders), sortOrder (asc|desc), search, nopaging</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/clients/:id <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Client avec historique complet de commandes</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method POST">POST</span>
+          <div class="route-header-text">
+            <div class="path">/api/clients <span class="auth auth-public">public</span></div>
+            <div class="desc">Crée un client (utilisé lors du checkout)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <pre>{ firstName, lastName, email, phone, address, postalCode, city, country }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- STAGIAIRES -->
+  <div class="section" id="stagiaires">
+    <div class="section-title">🧑‍🎓 Stagiaires <code>/api/stagiaires</code></div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/stagiaires <span class="auth auth-monitor">monitor+</span></div>
+            <div class="desc">Liste paginée des stagiaires avec réservations</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method POST">POST</span>
+          <div class="route-header-text">
+            <div class="path">/api/stagiaires <span class="auth auth-public">public</span></div>
+            <div class="desc">Crée un stagiaire (utilisé lors du checkout)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <pre>{ firstName, lastName, email, phone, weight, height, birthDate? }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- USERS -->
+  <div class="section" id="users">
+    <div class="section-title">🔐 Utilisateurs <code>/api/users</code></div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/users <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Liste tous les comptes utilisateurs (ADMIN/MONITEUR)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/users/by-role/:role <span class="auth auth-monitor">monitor+</span></div>
+            <div class="desc">Utilisateurs par rôle (ADMIN | MONITEUR | CUSTOMER)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method PATCH">PATCH</span>
+          <div class="route-header-text">
+            <div class="path">/api/users/:id/role <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Modifie le rôle d'un utilisateur</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <pre>{ role: "ADMIN" | "MONITEUR" | "CUSTOMER" }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- AUDIENCES -->
+  <div class="section" id="audiences">
+    <div class="section-title">👥 Audiences <code>/api/audiences</code></div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/audiences <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Liste toutes les audiences SMS avec leurs règles</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/audiences/contacts/search?q= <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Recherche de contacts (clients/stagiaires) pour ajout manuel</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/audiences/:id/resolve <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Résoud les contacts d'une audience selon ses règles</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Réponse 200</h4>
+            <pre>{ success: true, data: { count: number, contacts: [{ name, phone, email? }] } }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method POST">POST</span>
+          <div class="route-header-text">
+            <div class="path">/api/audiences <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Crée une audience avec règles de filtrage et contacts manuels</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <pre>{ name: string, description?: string,
+  rules: [{ ruleType: AudienceRuleType, stageType?, baptemeCategory?,
+            minOrderAmount?, dateFrom?, dateTo? }],
+  contacts: [{ name: string, phone: string }] }</pre>
+            <h4 style="margin-top:8px">AudienceRuleType</h4>
+            <pre>CLIENT_RESERVED_STAGE | CLIENT_RESERVED_BAPTEME | STAGIAIRE_STAGE | STAGIAIRE_BAPTEME
+PURCHASED_GIFT_VOUCHER | ORDER_ABOVE_AMOUNT</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- CAMPAIGNS -->
+  <div class="section" id="campaigns">
+    <div class="section-title">📱 Campagnes SMS <code>/api/campaigns</code></div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/campaigns <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Liste toutes les campagnes SMS</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method POST">POST</span>
+          <div class="route-header-text">
+            <div class="path">/api/campaigns <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Crée une campagne SMS (DRAFT)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <pre>{ name: string, message: string, audienceId: string, scheduledAt?: ISO }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method POST">POST</span>
+          <div class="route-header-text">
+            <div class="path">/api/campaigns/:id/send <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Envoie une campagne SMS à tous les contacts de l'audience (via Twilio)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Réponse 200</h4>
+            <pre>{ success: true, data: { sent: number, failed: number, total: number } }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="section" id="dashboard">
+    <div class="section-title">📊 Dashboard <code>/api/dashboard</code></div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/dashboard/stats <span class="auth auth-monitor">monitor+</span></div>
+            <div class="desc">KPIs globaux: CA, réservations, taux de remplissage</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/dashboard/monitor-schedule <span class="auth auth-monitor">monitor+</span></div>
+            <div class="desc">Planning du moniteur connecté (stages + baptêmes à venir)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body"></div>
+      </details>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="section" id="content">
+    <div class="section-title">📢 Contenu <code>/api/content</code></div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method GET">GET</span>
+          <div class="route-header-text">
+            <div class="path">/api/content/topbar <span class="auth auth-public">public</span></div>
+            <div class="desc">Contenu de la barre d'annonce (accès public sans clé)</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Réponse 200</h4>
+            <pre>{ success: true, data: { id, message, isVisible, link?, linkLabel? } }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="route">
+      <details>
+        <summary class="route-header">
+          <span class="method PUT">PUT</span>
+          <div class="route-header-text">
+            <div class="path">/api/content/topbar <span class="auth auth-admin">admin</span></div>
+            <div class="desc">Met à jour le contenu de la TopBar</div>
+          </div>
+          <span class="chevron">▶</span>
+        </summary>
+        <div class="route-body">
+          <div class="detail-block">
+            <h4>Body JSON</h4>
+            <pre>{ message: string, isVisible: boolean, link?: string, linkLabel?: string }</pre>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- Auth endpoints -->
+  <div class="section">
+    <div class="section-title">🔑 Authentification <code>/api/auth/*</code></div>
+    <p style="color:var(--muted);font-size:13px">
+      Géré par <strong>better-auth</strong> — monté sur <code>/api/auth/[...all]</code> (prioritaire sur Hono).
+      Endpoints: <code>POST /api/auth/sign-in/email</code>, <code>POST /api/auth/sign-up/email</code>,
+      <code>POST /api/auth/sign-out</code>, <code>GET /api/auth/session</code>.
+    </p>
+  </div>
+
+  <footer style="margin: 40px 0 20px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); padding-top: 16px;">
+    Serre-Chevalier Parapente Backoffice API — Généré le 2026-03-16 — Base URL: <code>/api</code>
+  </footer>
+</div>
+
+<script>
+  // Allow clicking anywhere on the route header to toggle details
+  document.querySelectorAll('.route-header').forEach(header => {
+    header.addEventListener('click', () => {
+      const details = header.closest('details');
+      if (details) details.open = !details.open;
+    });
+  });
+</script>
+</body>
+</html>

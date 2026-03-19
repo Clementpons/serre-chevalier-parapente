@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Docs — Serre Chevalier Parapente</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --border: #334155;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --green: #4ade80;
+      --yellow: #fbbf24;
+      --red: #f87171;
+      --orange: #fb923c;
+      --purple: #c084fc;
+      --cyan: #22d3ee;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Layout */
+    .layout { display: flex; min-height: 100vh; }
+    nav {
+      width: 260px; min-width: 260px; background: var(--surface); border-right: 1px solid var(--border);
+      position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: 1.5rem 1rem;
+    }
+    nav h2 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: .5rem; margin-top: 1.2rem; }
+    nav ul { list-style: none; }
+    nav li a { display: block; padding: .25rem .5rem; border-radius: 4px; font-size: .85rem; color: var(--muted); }
+    nav li a:hover { background: rgba(255,255,255,.05); color: var(--text); text-decoration: none; }
+    main { flex: 1; padding: 2rem 3rem; max-width: 960px; }
+
+    /* Header */
+    .hero { margin-bottom: 3rem; }
+    .hero h1 { font-size: 2rem; font-weight: 700; color: var(--accent); }
+    .hero p { color: var(--muted); margin-top: .5rem; }
+    .hero .meta { display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap; }
+    .chip { font-size: .75rem; padding: .2rem .6rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+
+    /* Section */
+    .section { margin-bottom: 3.5rem; }
+    .section-title {
+      font-size: 1.2rem; font-weight: 700; color: var(--text);
+      border-bottom: 1px solid var(--border); padding-bottom: .5rem; margin-bottom: 1.5rem;
+    }
+    .base-path {
+      display: inline-block; font-family: monospace; font-size: .8rem;
+      background: rgba(56,189,248,.1); border: 1px solid rgba(56,189,248,.3);
+      color: var(--accent); padding: .15rem .5rem; border-radius: 4px; margin-bottom: 1rem;
+    }
+
+    /* Route card */
+    .route { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1rem; overflow: hidden; }
+    .route-header {
+      display: flex; align-items: center; gap: 1rem; padding: .75rem 1rem;
+      background: rgba(255,255,255,.02); cursor: pointer; user-select: none;
+    }
+    .route-header:hover { background: rgba(255,255,255,.04); }
+    .method {
+      font-family: monospace; font-size: .75rem; font-weight: 700;
+      padding: .15rem .45rem; border-radius: 4px; min-width: 52px; text-align: center; flex-shrink: 0;
+    }
+    .GET    { background: rgba(74,222,128,.15); color: var(--green); border: 1px solid rgba(74,222,128,.3); }
+    .POST   { background: rgba(56,189,248,.15); color: var(--accent); border: 1px solid rgba(56,189,248,.3); }
+    .PUT    { background: rgba(251,191,36,.15); color: var(--yellow); border: 1px solid rgba(251,191,36,.3); }
+    .PATCH  { background: rgba(251,146,60,.15); color: var(--orange); border: 1px solid rgba(251,146,60,.3); }
+    .DELETE { background: rgba(248,113,113,.15); color: var(--red); border: 1px solid rgba(248,113,113,.3); }
+
+    .route-path { font-family: monospace; font-size: .9rem; color: var(--text); flex: 1; }
+    .auth-badge {
+      font-size: .7rem; padding: .15rem .5rem; border-radius: 999px; flex-shrink: 0;
+      border: 1px solid;
+    }
+    .auth-public  { color: var(--green); border-color: rgba(74,222,128,.4); }
+    .auth-session { color: var(--accent); border-color: rgba(56,189,248,.4); }
+    .auth-monitor { color: var(--yellow); border-color: rgba(251,191,36,.4); }
+    .auth-admin   { color: var(--red); border-color: rgba(248,113,113,.4); }
+    .auth-none    { color: var(--muted); border-color: var(--border); }
+    .auth-cart    { color: var(--purple); border-color: rgba(192,132,252,.4); }
+    .auth-any     { color: var(--cyan); border-color: rgba(34,211,238,.4); }
+
+    .route-body { padding: 1rem; border-top: 1px solid var(--border); display: none; }
+    .route-body.open { display: block; }
+
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 640px) { .detail-grid { grid-template-columns: 1fr; } }
+
+    .detail-block h4 { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: .5rem; }
+    pre {
+      background: rgba(0,0,0,.3); border: 1px solid var(--border); border-radius: 6px;
+      padding: .75rem; font-size: .78rem; overflow-x: auto; color: var(--text); white-space: pre-wrap;
+    }
+    .note { font-size: .82rem; color: var(--muted); margin-top: .5rem; }
+    .note strong { color: var(--text); }
+
+    /* Auth legend */
+    .legend { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 2rem; }
+
+    /* Expand toggle */
+    .toggle-btn {
+      margin-left: auto; color: var(--muted); font-size: .75rem; display: flex; align-items: center; gap: .25rem;
+    }
+    .toggle-btn .arrow { transition: transform .2s; }
+    .toggle-btn.open .arrow { transform: rotate(180deg); }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <!-- Sidebar -->
+  <nav>
+    <div style="font-weight:700;font-size:1rem;color:var(--text);margin-bottom:1rem;">⛰ SCP API</div>
+    <h2>Navigation</h2>
+    <ul>
+      <li><a href="#overview">Vue d'ensemble</a></li>
+      <li><a href="#auth">Authentification</a></li>
+    </ul>
+    <h2>Endpoints</h2>
+    <ul>
+      <li><a href="#users">/users</a></li>
+      <li><a href="#clients">/clients</a></li>
+      <li><a href="#stagiaires">/stagiaires</a></li>
+      <li><a href="#stages">/stages</a></li>
+      <li><a href="#reservationStages">/reservationStages</a></li>
+      <li><a href="#reservations">/reservations</a></li>
+      <li><a href="#baptemes">/baptemes</a></li>
+      <li><a href="#cart">/cart</a></li>
+      <li><a href="#availability">/availability</a></li>
+      <li><a href="#orders">/orders</a></li>
+      <li><a href="#tarifs">/tarifs</a></li>
+      <li><a href="#giftvouchers">/giftvouchers</a></li>
+      <li><a href="#promocodes">/promocodes</a></li>
+      <li><a href="#payments">/payments</a></li>
+      <li><a href="#dashboard">/dashboard</a></li>
+      <li><a href="#content">/content</a></li>
+      <li><a href="#campaigns">/campaigns</a></li>
+      <li><a href="#audiences">/audiences</a></li>
+    </ul>
+  </nav>
+
+  <!-- Main content -->
+  <main>
+    <div class="hero" id="overview">
+      <h1>API Documentation</h1>
+      <p>Serre Chevalier Parapente — Backoffice REST API (Hono + Next.js 15)</p>
+      <div class="meta">
+        <span class="chip">Base URL: <code>/api</code></span>
+        <span class="chip">Format: JSON</span>
+        <span class="chip">Date: 2026-03-16</span>
+      </div>
+    </div>
+
+    <!-- Auth legend -->
+    <div class="section" id="auth">
+      <div class="section-title">Authentification &amp; Middlewares</div>
+      <p class="note" style="margin-bottom:1rem;">Toutes les réponses suivent le format standard : <code>{ success: boolean, message?: string, data?: T }</code></p>
+      <div class="legend">
+        <span class="auth-badge auth-none">aucune auth</span>
+        <span class="auth-badge auth-public">x-api-key (public)</span>
+        <span class="auth-badge auth-cart">x-api-key + x-session-id (panier)</span>
+        <span class="auth-badge auth-any">session ou x-api-key</span>
+        <span class="auth-badge auth-session">session (connecté)</span>
+        <span class="auth-badge auth-monitor">moniteur ou admin</span>
+        <span class="auth-badge auth-admin">admin uniquement</span>
+      </div>
+      <pre>// Headers pour le front public
+x-api-key: &lt;NEXT_PUBLIC_API_KEY&gt;
+x-session-id: &lt;UUID v4 stocké localStorage, TTL 24h&gt;
+
+// Headers pour le backoffice (better-auth cookie)
+Cookie: &lt;better-auth session cookie&gt;</pre>
+    </div>
+
+    <!-- ===================== USERS ===================== -->
+    <div class="section" id="users">
+      <div class="section-title">Utilisateurs</div>
+      <div class="base-path">/api/users</div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Description</h4><p class="note">Liste tous les utilisateurs (admins + moniteurs).</p></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: User[] }</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/:id</span>
+          <span class="auth-badge auth-session">session</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Description</h4><p class="note">Retourne un utilisateur par ID.</p></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: User }</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/by-role/:role</span>
+          <span class="auth-badge auth-monitor">moniteur</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Paramètre URL : <strong>role</strong> — ADMIN | MONITEUR | CUSTOMER</div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method PATCH">PATCH</span>
+          <span class="route-path">/:id/role</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ role: "ADMIN" | "MONITEUR" | "CUSTOMER" }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: User }</pre></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== CLIENTS ===================== -->
+    <div class="section" id="clients">
+      <div class="section-title">Clients</div>
+      <div class="base-path">/api/clients</div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Query params</h4><pre>page, pageSize, sortBy, sortOrder
+search, nopaging (boolean)</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: {
+  clients: Client[],
+  totalCount, page, pageSize
+}}</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/:id</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Retourne le client avec ses commandes et items détaillés.</div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method POST">POST</span>
+          <span class="route-path">/</span>
+          <span class="auth-badge auth-public">x-api-key</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ email: string, firstName?: string,
+  lastName?: string, phone?: string,
+  address?: string, postalCode?: string,
+  city?: string, country?: string }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: Client }</pre></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== STAGIAIRES ===================== -->
+    <div class="section" id="stagiaires">
+      <div class="section-title">Stagiaires</div>
+      <div class="base-path">/api/stagiaires</div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/</span>
+          <span class="auth-badge auth-monitor">moniteur</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Query</h4><pre>page, pageSize, sortBy, sortOrder
+search, nopaging</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: { stagiaires: Stagiaire[], totalCount, page, pageSize }}</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/:id</span>
+          <span class="auth-badge auth-monitor">moniteur</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Stagiaire avec toutes ses réservations.</div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method POST">POST</span>
+          <span class="route-path">/</span>
+          <span class="auth-badge auth-public">x-api-key</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ email: string, firstName: string,
+  lastName: string, phone: string,
+  weight: number, height: number,
+  birthDate?: string }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: Stagiaire }</pre></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== STAGES ===================== -->
+    <div class="section" id="stages">
+      <div class="section-title">Stages</div>
+      <div class="base-path">/api/stages</div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/</span>
+          <span class="auth-badge auth-public">x-api-key</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Query</h4><pre>moniteurId? (string)
+date? (ISO string)</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: EnrichedStage[] }
+// EnrichedStage inclut:
+// availablePlaces, confirmedBookings,
+// temporaryReservations, moniteurs[]</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/:id</span>
+          <span class="auth-badge auth-session">session</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Stage complet avec bookings (+ stagiaires) et moniteurs.</div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method POST">POST</span>
+          <span class="route-path">/</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ startDate: string (ISO),
+  duration: number,
+  places: number,
+  moniteurIds: string[],
+  price: number,
+  acomptePrice: number,
+  type: StageType }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: Stage }</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method PUT">PUT</span>
+          <span class="route-path">/:id</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Même schéma que POST. Vérifie que la réduction de places est possible.</div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method PATCH">PATCH</span>
+          <span class="route-path">/:id/promote</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ newPrice: number,
+  endDate?: string (ISO),
+  reason?: string }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: Stage }
+// Crée aussi une StagePromotionHistory</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method DELETE">DELETE</span>
+          <span class="route-path">/:id/promote</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Annule la promotion — restaure le prix d'origine (<code>promotionOriginalPrice</code>).</div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method DELETE">DELETE</span>
+          <span class="route-path">/:id</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Interdit si des réservations existent sur le stage.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== RESERVATIONSTAGES ===================== -->
+    <div class="section" id="reservationStages">
+      <div class="section-title">Réservations de Stage (admin)</div>
+      <div class="base-path">/api/reservationStages</div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method POST">POST</span>
+          <span class="route-path">/createByAdmin</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ stageId: string,
+  stagiaireId: string,
+  paymentStatus?: "PENDING"|"ACOMPTE_PAID"|"FULL_PAID" }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: StageBooking }</pre></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== RESERVATIONS ===================== -->
+    <div class="section" id="reservations">
+      <div class="section-title">Réservations (vue unifiée)</div>
+      <div class="base-path">/api/reservations</div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/</span>
+          <span class="auth-badge auth-monitor">moniteur</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Query</h4><pre>page, limit, search
+type: ALL|STAGE|BAPTEME
+status, startDate, endDate, category</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: {
+  reservations: ReservationItem[],
+  totalCount, page, limit
+}}</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/:id</span>
+          <span class="auth-badge auth-monitor">moniteur</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Réservation unique (STAGE ou BAPTEME) avec disponibilité en temps réel.</div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method POST">POST</span>
+          <span class="route-path">/manual-payment</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ orderItemId: string,
+  amount: number,
+  method: "CASH"|"BANK_TRANSFER"|"CHECK",
+  note?: string }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: { payment, orderItem }}</pre></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== BAPTEMES ===================== -->
+    <div class="section" id="baptemes">
+      <div class="section-title">Baptêmes</div>
+      <div class="base-path">/api/baptemes</div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/</span>
+          <span class="auth-badge auth-any">session ou x-api-key</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Query</h4><pre>moniteurId?, date?</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: BaptemeWithAvail[] }
+// includes availablePlaces</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method POST">POST</span>
+          <span class="route-path">/</span>
+          <span class="auth-badge auth-monitor">moniteur</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ date: string (ISO),
+  startTime: string (HH:MM),
+  duration: number (min),
+  places: number,
+  moniteurIds: string[],
+  categories: BaptemeCategory[] }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: Bapteme }</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method PUT">PUT</span>
+          <span class="route-path">/:id</span>
+          <span class="auth-badge auth-monitor">moniteur</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Même schéma que POST. Vérifie la réduction de places.</div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method DELETE">DELETE</span>
+          <span class="route-path">/:id</span>
+          <span class="auth-badge auth-monitor">moniteur</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Interdit si des réservations existent.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== CART ===================== -->
+    <div class="section" id="cart">
+      <div class="section-title">Panier</div>
+      <div class="base-path">/api/cart</div>
+      <p class="note" style="margin-bottom:1rem;">Toutes ces routes nécessitent <strong>x-api-key</strong> + <strong>x-session-id</strong>.</p>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/items</span>
+          <span class="auth-badge auth-cart">panier</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <pre>{ success: true, data: { items: CartItem[], total: number }}</pre>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method POST">POST</span>
+          <span class="route-path">/add</span>
+          <span class="auth-badge auth-cart">panier</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ type: "STAGE"|"BAPTEME"|"GIFT_VOUCHER",
+  itemId?: string,           // stageId ou baptemeId
+  giftVoucherCode?: string,  // pour utiliser un bon
+  giftVoucherAmount?: number,// pour acheter un bon
+  participantData: {
+    firstName, lastName, email, phone,
+    weight, height, birthDate?,
+    // pour BAPTEME
+    selectedCategory?, hasVideo?,
+    // pour STAGE
+    selectedStageType?,
+    // pour GIFT_VOUCHER
+    voucherProductType, buyerName, buyerEmail,
+    recipientName?, recipientEmail?,
+    notifyRecipient: boolean
+  },
+  quantity: number }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: CartItem }</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method PUT">PUT</span>
+          <span class="route-path">/update/:id</span>
+          <span class="auth-badge auth-cart">panier</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Met à jour les données participant ou la vidéo option.</div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method DELETE">DELETE</span>
+          <span class="route-path">/remove/:id</span>
+          <span class="auth-badge auth-cart">panier</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Supprime l'item du panier. Libère la réservation temporaire si STAGE/BAPTEME.</div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method DELETE">DELETE</span>
+          <span class="route-path">/clear</span>
+          <span class="auth-badge auth-cart">panier</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Vide le panier complet pour la session.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== AVAILABILITY ===================== -->
+    <div class="section" id="availability">
+      <div class="section-title">Disponibilité</div>
+      <div class="base-path">/api/availability</div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method POST">POST</span>
+          <span class="route-path">/check</span>
+          <span class="auth-badge auth-public">x-api-key</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ type: "STAGE"|"BAPTEME",
+  itemId: string,
+  sessionId?: string }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: {
+  available: boolean,
+  reason?: string
+}}</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method POST">POST</span>
+          <span class="route-path">/reserve</span>
+          <span class="auth-badge auth-public">x-api-key</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ type: "STAGE"|"BAPTEME",
+  itemId: string,
+  sessionId: string }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: TemporaryReservation }
+// Expire dans 1 heure</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method DELETE">DELETE</span>
+          <span class="route-path">/release</span>
+          <span class="auth-badge auth-public">x-api-key</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Query</h4><pre>type: "STAGE"|"BAPTEME"
+itemId: string</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, message: "Libéré" }</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method POST">POST</span>
+          <span class="route-path">/periods</span>
+          <span class="auth-badge auth-public">x-api-key</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ type: "STAGE"|"BAPTEME",
+  year?: number,
+  category?: string,    // baptemeCategory
+  stageType?: string }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: {
+  years: [{year, count}],
+  months: [{year, month, count, hasPromo}]
+}}</pre></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== ORDERS ===================== -->
+    <div class="section" id="orders">
+      <div class="section-title">Commandes</div>
+      <div class="base-path">/api/orders</div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method POST">POST</span>
+          <span class="route-path">/</span>
+          <span class="auth-badge auth-cart">panier</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ customerEmail: string,
+  customerData?: {
+    firstName, lastName, phone,
+    address, postalCode, city, country
+  },
+  promoCodeId?: string }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: {
+  order: Order,
+  requiresPayment: boolean,
+  paymentIntent?: {
+    id, clientSecret
+  }
+}}
+// Si gratuit (bon cadeau 100%) : requiresPayment=false</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/:id</span>
+          <span class="auth-badge auth-public">x-api-key</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Commande avec items + paiements. Accessible via x-api-key (pour page succès).</div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Liste toutes les commandes non-PENDING (ou PENDING récentes &lt; 6h).</div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/search</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Query</h4><pre>q: string (orderNumber ou email)</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: Order[] }
+// Top 10 résultats</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method PATCH">PATCH</span>
+          <span class="route-path">/:id/status</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ status: "PENDING"|"PAID"|"CONFIRMED"
+         |"CANCELLED"|"REFUNDED" }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: Order }</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method DELETE">DELETE</span>
+          <span class="route-path">/ghost</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Supprime les commandes PENDING sans paiement réussi vieilles de plus de 24h.</div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method POST">POST</span>
+          <span class="route-path">/items/:orderItemId/finalize</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ note?: string }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: { orderItem, order }}</pre></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== TARIFS ===================== -->
+    <div class="section" id="tarifs">
+      <div class="section-title">Tarifs</div>
+      <div class="base-path">/api/tarifs</div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/all</span>
+          <span class="auth-badge auth-none">aucune auth</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Endpoint consolidé — retourne en une seule requête : <strong>baptemeCategories</strong>, <strong>videoOption</strong>, <strong>stagePrices</strong>, <strong>deposit</strong>.</div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/min</span>
+          <span class="auth-badge auth-none">aucune auth</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Query</h4><pre>type: "STAGE"|"BAPTEME"
+subType?: StageType | BaptemeCategory</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: {
+  minPrice: number | null,
+  currency: "EUR"
+}}</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method PUT">PUT</span>
+          <span class="route-path">/</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ category: BaptemeCategory, price: number }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: BaptemePrice }</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method PUT">PUT</span>
+          <span class="route-path">/stages/base</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ stageType: StageType, price: number }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: StageBasePrice }</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method PUT">PUT</span>
+          <span class="route-path">/video-option</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ price: number }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: VideoOptionPrice }</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method PUT">PUT</span>
+          <span class="route-path">/baptemes/deposit</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ price: number }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: BaptemeDepositPrice }</pre></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== GIFT VOUCHERS ===================== -->
+    <div class="section" id="giftvouchers">
+      <div class="section-title">Bons Cadeaux</div>
+      <div class="base-path">/api/giftvouchers</div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method POST">POST</span>
+          <span class="route-path">/lookup</span>
+          <span class="auth-badge auth-public">x-api-key</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ code: string }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: {
+  code, productType,
+  stageCategory, baptemeCategory,
+  recipientName, expiryDate
+}}
+// Vérifie: non utilisé, non expiré,
+// non réservé par une autre session</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method POST">POST</span>
+          <span class="route-path">/validate</span>
+          <span class="auth-badge auth-public">x-api-key</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ code: string,
+  productType: VoucherProductType,
+  category: string }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: { valid: true, voucher: {...}}}</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method POST">POST</span>
+          <span class="route-path">/reserve</span>
+          <span class="auth-badge auth-public">x-api-key</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ code: string, sessionId: string }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: GiftVoucher }
+// Définit reservedBySessionId</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method POST">POST</span>
+          <span class="route-path">/release</span>
+          <span class="auth-badge auth-public">x-api-key</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ code: string, sessionId: string }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: GiftVoucher }
+// Efface reservedBySessionId</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/price/:productType/:category</span>
+          <span class="auth-badge auth-public">x-api-key</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Retourne le prix de base pour un type de produit et une catégorie.</div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method POST">POST</span>
+          <span class="route-path">/</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ productType: VoucherProductType,
+  stageCategory?: StageBookingType,
+  baptemeCategory?: BaptemeCategory,
+  recipientName: string,
+  recipientEmail: string,
+  purchasePrice?: number }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: GiftVoucher }
+// Génère code GVSCP-XXXXXXXX-XXXX
+// Validité: 1 an</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method PATCH">PATCH</span>
+          <span class="route-path">/:id</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ recipientName?: string,
+  recipientEmail?: string,
+  isUsed?: boolean,
+  expiryDate?: string }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: GiftVoucher }</pre></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== PROMO CODES ===================== -->
+    <div class="section" id="promocodes">
+      <div class="section-title">Codes Promo</div>
+      <div class="base-path">/api/promocodes</div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method POST">POST</span>
+          <span class="route-path">/validate</span>
+          <span class="auth-badge auth-none">aucune auth</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ code: string, cartTotal: number }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: {
+  promoCode: { id, code, label,
+    discountType, discountValue,
+    maxDiscountAmount },
+  discountAmount: number,
+  cartTotalAfterDiscount: number
+}}</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Tous les codes promo avec l'historique des usages.</div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method POST">POST</span>
+          <span class="route-path">/</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ code: string, label?: string,
+  discountType: "FIXED"|"PERCENTAGE",
+  discountValue: number,
+  maxDiscountAmount?: number,
+  minCartAmount?: number,
+  maxUses?: number,
+  expiryDate?: string,
+  isActive?: boolean }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: PromoCode }</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method PUT">PUT</span>
+          <span class="route-path">/:id</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Même schéma que POST, tous les champs optionnels.</div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method DELETE">DELETE</span>
+          <span class="route-path">/:id</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Interdit si le code a déjà été utilisé.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== PAYMENTS ===================== -->
+    <div class="section" id="payments">
+      <div class="section-title">Paiements</div>
+      <div class="base-path">/api/payments</div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Tous les paiements avec leurs commandes et allocations.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== DASHBOARD ===================== -->
+    <div class="section" id="dashboard">
+      <div class="section-title">Dashboard</div>
+      <div class="base-path">/api/dashboard</div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/stats</span>
+          <span class="auth-badge auth-monitor">moniteur</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Stats de revenus + historique 13 mois (admin uniquement pour les chiffres CA).</div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/monitor-schedule</span>
+          <span class="auth-badge auth-monitor">moniteur</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Planning du jour + prochains créneaux (stages + baptêmes) pour le moniteur connecté.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== CONTENT ===================== -->
+    <div class="section" id="content">
+      <div class="section-title">Contenu (TopBar)</div>
+      <div class="base-path">/api/content</div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/topbar</span>
+          <span class="auth-badge auth-none">aucune auth</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Contenu de la barre supérieure du site public (message, lien, actif).</div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method PUT">PUT</span>
+          <span class="route-path">/topbar</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ message?: string,
+  link?: string,
+  isActive?: boolean }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: TopBar }</pre></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== CAMPAIGNS ===================== -->
+    <div class="section" id="campaigns">
+      <div class="section-title">Campagnes SMS</div>
+      <div class="base-path">/api/campaigns</div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Liste les campagnes avec comptages d'audiences et de destinataires.</div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method POST">POST</span>
+          <span class="route-path">/</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ name: string, message: string,
+  audienceIds: string[],
+  scheduledAt?: string (ISO) }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: Campaign }
+// Status: DRAFT ou SCHEDULED</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method POST">POST</span>
+          <span class="route-path">/:id/send</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Envoi immédiat de la campagne. Réponse asynchrone : <code>{ contactCount: number }</code>. L'envoi Twilio s'effectue en arrière-plan.</div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method DELETE">DELETE</span>
+          <span class="route-path">/:id</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Supprime une campagne (DRAFT ou SCHEDULED uniquement).</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== AUDIENCES ===================== -->
+    <div class="section" id="audiences">
+      <div class="section-title">Audiences SMS</div>
+      <div class="base-path">/api/audiences</div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/contacts/search</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Query</h4><pre>q: string (recherche nom/email/téléphone)</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: Contact[] }</pre></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method GET">GET</span>
+          <span class="route-path">/:id/resolve</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="note">Résout les contacts réels de l'audience (dédupliqués par numéro de téléphone).</div>
+        </div>
+      </div>
+
+      <div class="route">
+        <div class="route-header" onclick="toggle(this)">
+          <span class="method POST">POST</span>
+          <span class="route-path">/</span>
+          <span class="auth-badge auth-admin">admin</span>
+          <span class="toggle-btn"><span class="arrow">▼</span></span>
+        </div>
+        <div class="route-body">
+          <div class="detail-grid">
+            <div class="detail-block"><h4>Body</h4><pre>{ name: string,
+  rules: AudienceRule[],
+  contactIds?: string[] }</pre></div>
+            <div class="detail-block"><h4>Réponse</h4><pre>{ success: true, data: Audience }</pre></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="color:var(--muted);font-size:.8rem;margin-top:3rem;padding-top:1rem;border-top:1px solid var(--border);">
+      Généré le 2026-03-16 · Serre Chevalier Parapente API · v3
+    </div>
+  </main>
+</div>
+
+<script>
+  function toggle(header) {
+    const body = header.nextElementSibling;
+    const btn = header.querySelector('.toggle-btn');
+    body.classList.toggle('open');
+    btn.classList.toggle('open');
+  }
+</script>
+</body>
+</html>
