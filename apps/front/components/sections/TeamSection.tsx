@@ -352,7 +352,7 @@ export default function TeamSection({
             </div>
           </div>
           <p className="mt-4">
-            Passionné par le parapente et les sports de montagne depuis plus de 10 ans, je me découvre une véritable passion pour l'enseignement. Apprendre aux élèves à voler, quelle activité incroyable. Des premiers vols aux premiers thermiques, j'aime suivre la progression de chacun et ma pédagogie est adaptée à chaque personnalité et sensibilité, en français et en anglais.
+            Passionné par le parapente et les sports de montagne depuis plus de 10 ans, je me découvre une véritable passion pour l&apos;enseignement. Apprendre aux élèves à voler, quelle activité incroyable. Des premiers vols aux premiers thermiques, j&apos;aime suivre la progression de chacun et ma pédagogie est adaptée à chaque personnalité et sensibilité, en français et en anglais.
 Pour moi le vol plaisir passe avant tout par la sécurité.
           </p>
           {/* <Dialog>

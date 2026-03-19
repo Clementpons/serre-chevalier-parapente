@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import Head from "next/head";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -46,7 +45,7 @@ export default function LegalPage() {
               <p>
                 Les présentes Conditions Générales de Vente (CGV) régissent les
                 ventes de prestations de Serre Chevalier Parapente via son site
-                internet stage-de-parapente.fr. Elles définissent les droits et
+                internet serre-chevalier-parapente.fr. Elles définissent les droits et
                 obligations des parties dans le cadre des réservations
                 effectuées en ligne.
               </p>

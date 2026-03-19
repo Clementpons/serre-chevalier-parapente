@@ -12,6 +12,12 @@
     "lint": {
       "outputs": []
     },
+    "check": {
+      "outputs": []
+    },
+    "typecheck": {
+      "outputs": []
+    },
     "test": {
       "outputs": ["coverage/**"]
     },

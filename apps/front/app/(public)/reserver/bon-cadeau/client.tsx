@@ -449,11 +449,11 @@ export default function BonCadeauReservationClientPage() {
                 <ul className="space-y-2 text-sm text-cyan-800">
                   <li className="flex items-start gap-2">
                     <span className="text-cyan-600 mt-0.5">•</span>
-                    <span>Le bon cadeau sera <strong>valable un an</strong> à compter de la date d'achat.</span>
+                    <span>Le bon cadeau sera <strong>valable un an</strong> à compter de la date d&apos;achat.</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-cyan-600 mt-0.5">•</span>
-                    <span>Le bon cadeau couvre <strong>100% du prix</strong> d'une place pour le produit sélectionné.</span>
+                    <span>Le bon cadeau couvre <strong>100% du prix</strong> d&apos;une place pour le produit sélectionné.</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-cyan-600 mt-0.5">•</span>

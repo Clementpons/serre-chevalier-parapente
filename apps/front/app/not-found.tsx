@@ -181,14 +181,14 @@ export default function NotFound() {
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white"
               >
                 <Home className="w-5 h-5 mr-2" />
-                Retour à l'accueil
+                Retour à l&apos;accueil
               </Button>
             </Link>
           </div>
 
           {/* Message supplémentaire */}
           <p className="text-sm text-slate-500">
-            Si vous pensez que c'est une erreur, n'hésitez pas à nous contacter.
+            Si vous pensez que c&apos;est une erreur, n&apos;hésitez pas à nous contacter.
           </p>
         </div>
       </div>

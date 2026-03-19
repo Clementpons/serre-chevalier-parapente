@@ -226,7 +226,7 @@ function CheckoutSuccessPageContent() {
       }
     });
 
-    const promoDiscount = order?.promoDiscountAmount || 0;
+    const promoDiscount = order?.discountAmount || 0;
     return { depositTotal: Math.max(0, depositTotal - promoDiscount), remainingTotal, futurePayments };
   };
 
@@ -417,8 +417,8 @@ function CheckoutSuccessPageContent() {
             <div className="flex justify-between items-center mb-3">
               <div>
                 <p className="text-xs text-green-700 uppercase font-semibold tracking-wide mb-0.5">Payé aujourd&apos;hui</p>
-                {(order.promoDiscountAmount ?? 0) > 0 && (
-                  <p className="text-xs text-green-600 mb-0.5">Code promo appliqué : <strong>-{order.promoDiscountAmount.toFixed(2)}€</strong></p>
+                {(order.discountAmount ?? 0) > 0 && (
+                  <p className="text-xs text-green-600 mb-0.5">Code promo appliqué : <strong>-{(order.discountAmount ?? 0).toFixed(2)}€</strong></p>
                 )}
                 <p className="text-2xl font-bold text-green-600">{totals.depositTotal.toFixed(2)}€</p>
                 <p className="text-xs text-green-600 mt-1">

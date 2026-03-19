@@ -149,7 +149,7 @@ export const GiftVoucherPurchaseEmail = ({
                 <div>
                   <Text style={stepTitle}>Rendez-vous sur notre site</Text>
                   <Text style={stepDesc}>
-                    Allez sur <Link href="https://stage-de-parapente.fr" style={link}>stage-de-parapente.fr</Link>
+                    Allez sur <Link href="https://serre-chevalier-parapente.fr" style={link}>serre-chevalier-parapente.fr</Link>
                   </Text>
                 </div>
               </div>
@@ -225,7 +225,7 @@ export const GiftVoucherPurchaseEmail = ({
 
           {/* Bouton de réservation */}
           <Section style={ctaSection}>
-            <Button href="https://stage-de-parapente.fr" style={button}>
+            <Button href="https://serre-chevalier-parapente.fr" style={button}>
               📅 Réserver mon activité
             </Button>
           </Section>

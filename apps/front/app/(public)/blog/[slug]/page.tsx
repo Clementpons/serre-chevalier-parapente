@@ -2,7 +2,7 @@
 
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
-import { getBlog, getBlogs } from "@/sanity/lib/blogs";
+import { getBlog } from "@/sanity/lib/blogs";
 import Image from "next/image";
 import { PortableText } from "next-sanity";
 import ImageComponent from "@/components/blog/ImageComponent";
@@ -111,7 +111,7 @@ const PostPage = async ({ params }: PostPageProps) => {
           </div>
           <div className="flex items-center mt-2 mb-8 lg:mb-16 gap-4">
             {post.categories &&
-              post.categories.map((category: any, index: any) => (
+              post.categories.map((category: any) => (
                 <Link
                   href={`/blog?categories=${category.title}`}
                   key={category.title}

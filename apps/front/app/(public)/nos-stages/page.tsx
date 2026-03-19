@@ -16,7 +16,6 @@ import {
 import {
   BikeIcon,
   BusFrontIcon,
-  ChevronRight,
   ChevronRightIcon,
   HomeIcon,
   IceCreamBowlIcon,

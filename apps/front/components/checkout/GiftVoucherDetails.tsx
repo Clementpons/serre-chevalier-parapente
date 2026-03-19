@@ -306,7 +306,7 @@ export function GiftVoucherDetails({
               <div>
                 <p className="text-xs text-cyan-700">Message personnalisé</p>
                 <p className="font-medium text-cyan-800 text-xs mt-1 italic bg-white p-2 rounded border border-cyan-200">
-                  "{participantData.personalMessage}"
+                  &quot;{participantData.personalMessage}&quot;
                 </p>
               </div>
             </div>

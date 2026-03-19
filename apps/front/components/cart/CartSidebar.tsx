@@ -14,7 +14,6 @@ import { Badge } from "@/components/ui/badge";
 import { SessionManager } from "@/lib/sessionManager";
 import { useToast } from "@/components/ui/use-toast";
 import { CartItemCard } from "./CartItemCard";
-import { ReservationStatusBadge } from "./ReservationStatusBadge";
 import { useBaptemePrices } from "@/hooks/useBaptemePrices";
 
 interface CartItem {

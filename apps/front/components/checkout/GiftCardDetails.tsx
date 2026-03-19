@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Gift, User, Mail, MessageSquare, Edit2, Save, X } from 'lucide-react';
+import { User, Mail, MessageSquare, Edit2, Save, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -280,7 +280,7 @@ export function GiftCardDetails({
               <div>
                 <p className="text-xs text-slate-500">Message personnalisé</p>
                 <p className="font-medium text-slate-700 text-xs mt-1 italic bg-white p-2 rounded border border-slate-200">
-                  "{participantData.personalMessage}"
+                  &quot;{participantData.personalMessage}&quot;
                 </p>
               </div>
             </div>

@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import Head from "next/head";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -46,7 +45,7 @@ export default function LegalPage() {
               <p>
                 Les présentes Conditions Générales d&apos;Utilisation (CGU)
                 définissent les règles d’accès et d’utilisation du site
-                stage-de-parapente.fr. L’accès et la navigation sur le site
+                serre-chevalier-parapente.fr. L’accès et la navigation sur le site
                 impliquent l’acceptation pleine et entière des présentes CGU.
               </p>
 
@@ -67,7 +66,7 @@ export default function LegalPage() {
 
               <h2>4. CONTENUS ET PROPRIÉTÉ INTELLECTUELLE</h2>
               <p>
-                L’ensemble des éléments du site (stage-de-parapente.fr) – textes, images, graphismes, logos, vidéos, codes – est protégé par le droit de la propriété intellectuelle. Toute reproduction, représentation ou exploitation non autorisée est interdite.
+                L’ensemble des éléments du site (serre-chevalier-parapente.fr) – textes, images, graphismes, logos, vidéos, codes – est protégé par le droit de la propriété intellectuelle. Toute reproduction, représentation ou exploitation non autorisée est interdite.
               </p>
 
               <h2>5. RESPONSABILITÉ</h2>

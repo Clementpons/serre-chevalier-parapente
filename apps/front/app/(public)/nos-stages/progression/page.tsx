@@ -17,7 +17,6 @@ import {
   LucideClock8,
   LucideCloudRainWind,
   LucideDumbbell,
-  LucideMedal,
   LucideUsersRound,
 } from "lucide-react";
 import Image from "next/image";

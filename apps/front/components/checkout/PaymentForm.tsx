@@ -32,7 +32,6 @@ export function PaymentForm({
   const stripe = useStripe();
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -168,7 +167,7 @@ export function PaymentForm({
 
           {/* Informations légales */}
           <div className="text-xs text-gray-500 text-center">
-            <p>En cliquant sur "Payer", vous acceptez nos conditions générales de vente.</p>
+            <p>En cliquant sur &quot;Payer&quot;, vous acceptez nos conditions générales de vente.</p>
             <p>Aucun prélèvement ne sera effectué avant confirmation de votre réservation.</p>
           </div>
         </form>

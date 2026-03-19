@@ -13,7 +13,6 @@ import {
   Clock,
 } from "lucide-react";
 import Link from "next/link";
-import { MdCardGiftcard } from "react-icons/md";
 
 const PRODUCTS = [
   {
@@ -232,7 +231,7 @@ export default function ReserverClientPage() {
                   Réservation flexible
                 </h3>
                 <p className="text-sm text-slate-600">
-                  Modifiez ou annulez gratuitement jusqu'à 48h avant
+                  Modifiez ou annulez gratuitement jusqu&apos;à 48h avant
                 </p>
               </div>
               <div className="flex flex-col items-center">
@@ -247,7 +246,7 @@ export default function ReserverClientPage() {
               <div className="flex flex-col items-center">
                 <Mountain className="w-8 h-8 text-blue-600 mb-2" />
                 <h3 className="font-semibold text-slate-800 mb-1">
-                  Sites d'exception
+                  Sites d&apos;exception
                 </h3>
                 <p className="text-sm text-slate-600">
                   Les plus beaux spots de vol des Alpes

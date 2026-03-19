@@ -3,7 +3,6 @@ import TeamSection from "@/components/sections/TeamSection";
 import Testimonial from "@/components/sections/TestimonySection";
 import SliderPentesEcoles from "@/components/ui-self/sliders/SliderPentesEcoles";
 import SliderSitesGrandVols from "@/components/ui-self/sliders/SliderSitesGrandVols";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -14,16 +13,13 @@ import {
 } from "@/components/ui/dialog";
 import {
   ChevronRightIcon,
-  LucideArrowRight,
   LucideCalendar,
   LucideClock8,
   LucideCloudRainWind,
   LucideDumbbell,
-  LucideMedal,
   LucideUsersRound,
 } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import CTANosStages from "../cta";
 import { StagePriceBadge } from "@/components/price/StagePriceBadge";
 

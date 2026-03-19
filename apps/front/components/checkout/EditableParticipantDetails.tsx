@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { User, Mail, Phone, Weight, Ruler, Calendar, Video, Edit2, Save, X, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,20 +43,6 @@ export function EditableParticipantDetails({
   const { register, handleSubmit, formState: { errors }, reset } = useForm({
     defaultValues: participantData
   });
-
-  const getCategoryLabel = (category: string) => {
-    const labels: Record<string, string> = {
-      'AVENTURE': 'Baptême Aventure',
-      'DUREE': 'Baptême Durée',
-      'LONGUE_DUREE': 'Baptême Longue Durée',
-      'ENFANT': 'Baptême Enfant',
-      'HIVER': 'Baptême Hiver',
-      'INITIATION': 'Stage Initiation',
-      'PROGRESSION': 'Stage Progression',
-      'AUTONOMIE': 'Stage Autonomie',
-    };
-    return labels[category] || category;
-  };
 
   const formatBirthDate = (dateString?: string) => {
     if (!dateString) return null;

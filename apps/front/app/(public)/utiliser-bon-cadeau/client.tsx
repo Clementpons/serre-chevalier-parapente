@@ -326,7 +326,7 @@ export default function UtiliserBonCadeauClient() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-slate-600 text-sm">
-                Votre code a été fourni lors de l'achat du bon cadeau. Il commence
+                Votre code a été fourni lors de l&apos;achat du bon cadeau. Il commence
                 par <strong>GVSCP-</strong>.
               </p>
               <div className="flex gap-2">
@@ -371,7 +371,7 @@ export default function UtiliserBonCadeauClient() {
                 </p>
                 <p className="text-sm text-cyan-700">
                   Bénéficiaire : <strong>{voucher.recipientName}</strong> · Valable
-                  jusqu'au {new Date(voucher.expiryDate).toLocaleDateString("fr-FR")}
+                  jusqu&apos;au {new Date(voucher.expiryDate).toLocaleDateString("fr-FR")}
                 </p>
               </div>
             </div>

@@ -983,7 +983,7 @@ function BaptemeReservationPageContent() {
                                   : "text-slate-800"
                               }`}
                             >
-                              Pour quelqu'un d'autre
+                              Pour quelqu&apos;un d&apos;autre
                             </div>
                             <div
                               className={`text-sm mt-1 ${
@@ -1504,7 +1504,7 @@ function BaptemeReservationPageContent() {
               </p>
               <p className="text-sm">
                 Cette place est temporairement réservée pour vous. Finalisez
-                votre paiement dans l'heure pour confirmer votre réservation.
+                votre paiement dans l&apos;heure pour confirmer votre réservation.
               </p>
               <div className="flex items-center justify-center gap-2 text-orange-600 bg-orange-50 p-2 rounded-lg mt-3">
                 <Clock className="w-4 h-4" />

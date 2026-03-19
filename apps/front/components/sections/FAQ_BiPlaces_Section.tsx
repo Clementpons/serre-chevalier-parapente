@@ -42,7 +42,7 @@ export default function FAQBiPlacesSection() {
                 </li>
                 <li className="before:content-[''] before:block before:w-1 before:h-1 before:bg-slate-900 before:rounded-lg before:absolute before:top-0 before:left-0 before:translate-y-2 relative pl-4">
                   Personnes en situation de handicap : nous proposons des vols
-                  en chariot pour les personnes à mobilité réduite. N'hésitez
+                  en chariot pour les personnes à mobilité réduite. N&apos;hésitez
                   pas à nous contacter pour en discuter ensemble.
                 </li>
               </ul>

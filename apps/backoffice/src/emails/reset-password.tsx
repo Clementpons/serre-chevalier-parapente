@@ -51,7 +51,7 @@ export const ResetPasswordEmail = ({
           <Hr style={hr} />
 
           <Text style={footer}>
-            Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
+            Si vous n&apos;êtes pas à l&apos;origine de cette demande, ignorez cet email.
             Votre mot de passe ne sera pas modifié.
           </Text>
           <Text style={footer}>

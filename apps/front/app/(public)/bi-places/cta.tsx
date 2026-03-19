@@ -37,7 +37,7 @@ function CTABiPlaces() {
           title="Réserver mon Baptême de l'Air"
         >
           <LucideArrowRight className="size-4 mr-2" />
-          Réserver mon Baptême de l'Air
+          Réserver mon Baptême de l&apos;Air
           <LucideArrowRight className="size-4 ml-2" />
         </Link>
       </Button>
@@ -54,7 +54,7 @@ function CTABiPlaces() {
           title="Réserver mon Baptême de l'Air"
         >
           <LucideArrowRight className="size-4 mr-2" />
-          Réserver mon Baptême de l'Air
+          Réserver mon Baptême de l&apos;Air
           <LucideArrowRight className="size-4 ml-2" />
         </Link>
       </Button>

@@ -33,7 +33,7 @@ interface OrderEmailData {
 
 export async function sendOrderConfirmationEmail(data: OrderEmailData) {
   try {
-    const sender = process.env.RESEND_FROM_EMAIL || 'Serre Chevalier Parapente <noreply@stage-de-parapente.fr>';
+    const sender = process.env.RESEND_FROM_EMAIL || 'Serre Chevalier Parapente <noreply@serre-chevalier-parapente.fr>';
 
     const { data: emailData, error } = await resend.emails.send({
       from: sender,
@@ -65,7 +65,7 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData) {
 
 export async function sendAdminNewOrderEmail(data: OrderEmailData) {
   try {
-    const sender = process.env.RESEND_FROM_EMAIL || 'Serre Chevalier Parapente <noreply@stage-de-parapente.fr>';
+    const sender = process.env.RESEND_FROM_EMAIL || 'Serre Chevalier Parapente <noreply@serre-chevalier-parapente.fr>';
     const adminEmail = process.env.ADMIN_EMAIL || '';
 
     const { data: emailData, error } = await resend.emails.send({
@@ -120,7 +120,7 @@ export async function sendPasswordResetEmail({
   userEmail: string;
   resetUrl: string;
 }) {
-  const sender = process.env.RESEND_FROM_EMAIL || 'Serre Chevalier Parapente <noreply@stage-de-parapente.fr>';
+  const sender = process.env.RESEND_FROM_EMAIL || 'Serre Chevalier Parapente <noreply@serre-chevalier-parapente.fr>';
   const { error } = await resend.emails.send({
     from: sender,
     to: [userEmail],
@@ -132,7 +132,7 @@ export async function sendPasswordResetEmail({
 
 export async function sendGiftVoucherPurchaseEmail(data: GiftVoucherEmailData) {
   try {
-    const sender = process.env.RESEND_FROM_EMAIL || 'Serre Chevalier Parapente <noreply@stage-de-parapente.fr>';
+    const sender = process.env.RESEND_FROM_EMAIL || 'Serre Chevalier Parapente <noreply@serre-chevalier-parapente.fr>';
 
     // Déterminer le destinataire selon notifyRecipient
     const recipientEmail = data.notifyRecipient ? data.recipientEmail : data.buyerEmail;

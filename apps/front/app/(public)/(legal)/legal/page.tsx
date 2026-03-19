@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import Head from "next/head";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -67,7 +66,7 @@ export default function LegalPage() {
               <h2>3. PROPRIÉTÉ INTELLECTUELLE</h2>
               <p>
                 L’ensemble des éléments présents sur le site
-                (stage-de-parapente.fr), notamment les textes, images,
+                (serre-chevalier-parapente.fr), notamment les textes, images,
                 graphismes, logos, vidéos, architecture, bases de données et
                 codes sources, est protégé par le droit de la propriété
                 intellectuelle. Toute reproduction, représentation,

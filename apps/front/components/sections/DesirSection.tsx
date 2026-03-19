@@ -14,8 +14,6 @@ import {
   StarIcon,
   BusFrontIcon,
 } from "lucide-react";
-import { Button } from "../ui/button";
-import Link from "next/link";
 import SliderPentesEcoles from "../ui-self/sliders/SliderPentesEcoles";
 import SliderSitesGrandVols from "../ui-self/sliders/SliderSitesGrandVols";
 import {

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { cn } from "@/lib/utils";
 
 export default function TimelineSection() {
   const [activeSteps, setActiveSteps] = useState<number[]>([]);
@@ -95,11 +94,11 @@ export default function TimelineSection() {
                   Une fois votre créneau choisi, il vous suffit de réserver en ligne. Vous recevez alors une notification immédiate confirmant votre inscription.
                 </p>
                 <p>
-                  La veille du vol, entre 18h et 20h, vous recevrez un SMS de confirmation avec tous les détails pratiques : heure exacte, lieu de rendez-vous, équipement à prévoir… Si vous n'avez pas reçu ce message passé 20h, n'hésitez pas à nous appeler.
+                  La veille du vol, entre 18h et 20h, vous recevrez un SMS de confirmation avec tous les détails pratiques : heure exacte, lieu de rendez-vous, équipement à prévoir… Si vous n'avez pas reçu ce message passé 20h, n&apos;hésitez pas à nous appeler.
                 </p>
                 <div className="bg-slate-50 border-l-4 border-blue-600 p-4 rounded-r-lg">
                   <p className="text-slate-800 font-medium">
-                    À noter : le parapente dépend étroitement des conditions météo. Il est possible que l'horaire soit ajusté pour garantir les meilleures conditions de vol. Nous vous conseillons de garder en tête un ou deux créneaux de report, au cas où la météo nécessite un décalage.
+                    À noter : le parapente dépend étroitement des conditions météo. Il est possible que l&apos;horaire soit ajusté pour garantir les meilleures conditions de vol. Nous vous conseillons de garder en tête un ou deux créneaux de report, au cas où la météo nécessite un décalage.
                   </p>
                 </div>
               </div>
@@ -130,10 +129,10 @@ export default function TimelineSection() {
               </h3>
               <div className="space-y-4 text-slate-800">
                 <p>
-                  Le jour de votre baptême, rendez-vous au parking des Carines, au pied du col du Granon. C'est là que vous retrouvez notre équipe, les moniteurs et parfois quelques autres passagers déjà dans l'ambiance... Un peu d'excitation, beaucoup de sourires.
+                  Le jour de votre baptême, rendez-vous au parking des Carines, au pied du col du Granon. C&apos;est là que vous retrouvez notre équipe, les moniteurs et parfois quelques autres passagers déjà dans l&apos;ambiance... Un peu d&apos;excitation, beaucoup de sourires.
                 </p>
                 <p>
-                  Une fois le groupe réuni, nous vous présentons le déroulement de l'activité, étape par étape:
+                  Une fois le groupe réuni, nous vous présentons le déroulement de l&apos;activité, étape par étape:
                 </p>
                 <ul className="list-disc list-inside space-y-2 ml-4">
                   <li>Combien de temps dure la montée et la préparation</li>
@@ -142,7 +141,7 @@ export default function TimelineSection() {
                 </ul>
                 <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg">
                   <p>
-                    Pendant ce temps, les accompagnants restent à l'atterrissage, une zone dégagée et agréable qui offre une vue parfaite sur votre vol, du décollage à l'atterrissage.
+                    Pendant ce temps, les accompagnants restent à l&apos;atterrissage, une zone dégagée et agréable qui offre une vue parfaite sur votre vol, du décollage à l&apos;atterrissage.
                   </p>
                   <p className="mt-2">
                     Vous, vous prenez place dans notre navette, direction le décollage. Le briefing technique est réalisé sur place, juste avant le vol, dans une ambiance détendue mais concentrée, avec votre moniteur à vos côtés.
@@ -176,18 +175,18 @@ export default function TimelineSection() {
               </h3>
               <div className="space-y-4 text-slate-800">
                 <p>
-                  Arrivé sur le site de décollage, souvent perché à plus de 2000 mètres d'altitude, vous prenez une grande bouffée d'air pur. Le silence, la vue dégagée sur la vallée, la lumière du jour sur les sommets… Tout invite à lâcher prise. C'est un moment suspendu, hors du temps.
+                  Arrivé sur le site de décollage, souvent perché à plus de 2000 mètres d&apos;altitude, vous prenez une grande bouffée d&apos;air pur. Le silence, la vue dégagée sur la vallée, la lumière du jour sur les sommets… Tout invite à lâcher prise. C'est un moment suspendu, hors du temps.
                 </p>
                 <p>
                   Votre moniteur vous équipe : une sellette confortable, un casque, un dernier point météo. Puis vient le briefing. En quelques mots simples, il vous explique :
                 </p>
                 <ul className="list-disc list-inside space-y-2 ml-4">
                   <li>Comment prendre appui pour gonfler la voile,</li>
-                  <li>De rester debout jusqu'à l'ordre de s'asseoir,</li>
+                  <li>De rester debout jusqu&apos;à l&apos;ordre de s&apos;asseoir,</li>
                   <li>Et surtout : se laisser porter, profiter.</li>
                 </ul>
                 <p>
-                  Quelques pas… et vous quittez le sol en douceur. Pas de secousse, pas de saut : juste cette sensation incroyable d'être porté, comme sur un coussin d'air.
+                  Quelques pas… et vous quittez le sol en douceur. Pas de secousse, pas de saut : juste cette sensation incroyable d&apos;être porté, comme sur un coussin d&apos;air.
                 </p>
                 <p>
                   Le vol commence. Il est silencieux, fluide, incroyablement apaisant. Vous êtes confortablement installé, votre moniteur gère la trajectoire. Vous pouvez discuter, observer, poser vos questions… ou simplement vous laisser émerveiller.
@@ -196,13 +195,13 @@ export default function TimelineSection() {
                 <div className="bg-gradient-to-r from-slate-50 to-slate-50 border border-slate-200 p-6 rounded-lg">
                   <h4 className="font-bold text-lg text-slate-800 mb-3">Et côté sensations ?</h4>
                   <p className="mb-3">
-                    Le baptême bi-place, ce n'est ni une chute libre, ni un manège. C'est doux, naturel, progressif.
+                    Le baptême bi-place, ce n&apos;est ni une chute libre, ni un manège. C'est doux, naturel, progressif.
                   </p>
                   <p className="mb-3">
-                    Mais si vous aimez un peu d'adrénaline, votre pilote peut ajouter quelques virages dynamiques en fin de vol. Uniquement si vous le souhaitez.
+                    Mais si vous aimez un peu d&apos;adrénaline, votre pilote peut ajouter quelques virages dynamiques en fin de vol. Uniquement si vous le souhaitez.
                   </p>
                   <p className="text-slate-800 font-medium">
-                    La sécurité, elle, reste non négociable : tout notre matériel est récent, contrôlé, homologué. Tous les moniteurs sont diplômés d'État, formés à la pédagogie et au pilotage de précision.
+                    La sécurité, elle, reste non négociable : tout notre matériel est récent, contrôlé, homologué. Tous les moniteurs sont diplômés d&apos;État, formés à la pédagogie et au pilotage de précision.
                   </p>
                 </div>
               </div>
@@ -233,13 +232,13 @@ export default function TimelineSection() {
               </h3>
               <div className="space-y-4 text-slate-800">
                 <p>
-                  Après votre vol riche, le retour au sol se fait en douceur. L'atterrissage a lieu dans une grande prairie dégagée, au pied du col du Granon.
+                  Après votre vol riche, le retour au sol se fait en douceur. L&apos;atterrissage a lieu dans une grande prairie dégagée, au pied du col du Granon.
                 </p>
                 <p>
-                  Votre moniteur vous indique simplement de vous redresser et de marcher quelques pas à l'arrivée. Parfois, la voile conserve un peu de vitesse : c'est volontaire, cette énergie est utilisée pour se poser proprement.
+                  Votre moniteur vous indique simplement de vous redresser et de marcher quelques pas à l&apos;arrivée. Parfois, la voile conserve un peu de vitesse : c&apos;est volontaire, cette énergie est utilisée pour se poser proprement.
                 </p>
                 <p>
-                  Une fois les pieds à terre, les émotions remontent. Joie, fierté, apaisement… et souvent, l'envie immédiate de recommencer.
+                  Une fois les pieds à terre, les émotions remontent. Joie, fierté, apaisement… et souvent, l&apos;envie immédiate de recommencer.
                 </p>
                 
                 <div className="bg-gradient-to-r from-slate-50 to-slate-50 border border-slate-200 p-6 rounded-lg">

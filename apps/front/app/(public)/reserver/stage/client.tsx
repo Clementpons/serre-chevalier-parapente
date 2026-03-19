@@ -684,14 +684,6 @@ function StageReservationPageContent() {
     return formatted.charAt(0).toUpperCase() + formatted.slice(1);
   };
 
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString("fr-FR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
@@ -1157,7 +1149,7 @@ function StageReservationPageContent() {
                             <div
                               className={`font-semibold text-lg ${participantType === "other" ? "text-blue-700" : "text-slate-800"}`}
                             >
-                              Pour quelqu'un d'autre
+                              Pour quelqu&apos;un d&apos;autre
                             </div>
                             <div
                               className={`text-sm mt-1 ${participantType === "other" ? "text-blue-600" : "text-slate-600"}`}
@@ -1548,7 +1540,7 @@ function StageReservationPageContent() {
               </p>
               <p className="text-sm">
                 Cette place est temporairement réservée pour vous. Finalisez
-                votre paiement dans l'heure pour confirmer votre réservation.
+                votre paiement dans l&apos;heure pour confirmer votre réservation.
               </p>
               <div className="flex items-center justify-center gap-2 text-orange-600 bg-orange-50 p-2 rounded-lg mt-3">
                 <Clock className="w-4 h-4" />

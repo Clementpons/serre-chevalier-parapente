@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Video, Check, X, Plus, Loader2 } from 'lucide-react';
+import { Video, Check, Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { SessionManager } from '@/lib/sessionManager';

@@ -504,15 +504,6 @@ export default function CheckoutPage() {
     return { depositTotal, remainingTotal, fullTotal, futurePayments };
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("fr-FR", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-  };
-
   const groupItemsByType = () => {
     const groups: Record<string, CartItem[]> = {
       STAGE: [],

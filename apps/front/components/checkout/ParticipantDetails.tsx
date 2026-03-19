@@ -1,6 +1,5 @@
-import { User, Mail, Phone, Weight, Ruler, Calendar, Video } from 'lucide-react';
+import { User, Mail, Phone, Weight, Ruler, Calendar } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 
 interface ParticipantDetailsProps {
   participantData: {
@@ -19,20 +18,6 @@ interface ParticipantDetailsProps {
 }
 
 export function ParticipantDetails({ participantData, type }: ParticipantDetailsProps) {
-  const getCategoryLabel = (category: string) => {
-    const labels: Record<string, string> = {
-      'AVENTURE': 'Baptême Aventure',
-      'DUREE': 'Baptême Durée',
-      'LONGUE_DUREE': 'Baptême Longue Durée',
-      'ENFANT': 'Baptême Enfant',
-      'HIVER': 'Baptême Hiver',
-      'INITIATION': 'Stage Initiation',
-      'PROGRESSION': 'Stage Progression',
-      'AUTONOMIE': 'Stage Autonomie',
-    };
-    return labels[category] || category;
-  };
-
   const formatBirthDate = (dateString?: string) => {
     if (!dateString) return null;
     const date = new Date(dateString);

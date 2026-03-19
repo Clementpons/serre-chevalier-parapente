@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
 import { SessionManager } from "@/lib/sessionManager";
 import { useToast } from "@/components/ui/use-toast";
 import { Clock, Calendar } from "lucide-react";
@@ -267,7 +266,7 @@ export function ParticipantFormModal({
                     <div
                       className={`font-semibold text-lg ${participantType === "other" ? "text-blue-700" : "text-slate-800"}`}
                     >
-                      Pour quelqu'un d'autre
+                      Pour quelqu&apos;un d&apos;autre
                     </div>
                     <div
                       className={`text-sm mt-1 ${participantType === "other" ? "text-blue-600" : "text-slate-600"}`}

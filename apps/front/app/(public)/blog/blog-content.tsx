@@ -160,7 +160,7 @@ function BlogContent() {
                 Dernier article
               </span>
               {lastPost.categories &&
-                lastPost.categories.map((category: any, index: any) => (
+                lastPost.categories.map((category: any,) => (
                   <span
                     key={category.title}
                     className="hidden md:block text-slate-50 bg-slate-400 rounded-[4px] px-2 py-1 text-sm">

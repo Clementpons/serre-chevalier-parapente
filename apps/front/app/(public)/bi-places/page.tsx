@@ -89,21 +89,21 @@ export default function NosStagesPage() {
           <p className="text-slate-800 mt-4">
             Offrez-vous une parenthèse hors du temps avec un baptême de
             parapente biplace à Serre-Chevalier, guidé par un moniteur diplômé
-            d'État. Du vol découverte au vol de durée, chaque envol est pensé
+            d&apos;État. Du vol découverte au vol de durée, chaque envol est pensé
             pour vous faire vivre des sensations inoubliables, en toute
             sécurité.
           </p>
           <p className="text-slate-800 mt-4">
             Dans le décor grandiose du Briançonnais, survolant les vallées du
-            Galibier jusqu'aux portes du Parc national des Écrins, laissez-vous
-            porter par l'air pur des Alpes. Ici, pas de foule au décollage ni de
+            Galibier jusqu&apos;aux portes du Parc national des Écrins, laissez-vous
+            porter par l&apos;air pur des Alpes. Ici, pas de foule au décollage ni de
             surfréquentation : vous profitez pleinement de votre vol, à votre
             rythme.
           </p>
           <p className="text-slate-800 mt-4">
             Adultes, enfants, aventuriers ou contemplatifs : nos baptêmes
-            s'adaptent à toutes les envies. Que ce soit pour vous ou à offrir,
-            c'est une expérience vibrante, accessible et profondément humaine.
+            s&apos;adaptent à toutes les envies. Que ce soit pour vous ou à offrir,
+            c&apos;est une expérience vibrante, accessible et profondément humaine.
           </p>
           <div className="flex flex-col md:flex-row gap-4 mt-4">
             <Link href="#formules" className="inline-block">
@@ -149,7 +149,7 @@ export default function NosStagesPage() {
               className="inline-block hover:underline"
             >
               <h3 className="font-bold text-2xl text-slate-800">
-                Baptême Parapente "Aventure"
+                Baptême Parapente &quot;Aventure&quot;
               </h3>
             </Link>
             <p
@@ -179,7 +179,7 @@ export default function NosStagesPage() {
               15 minutes de vol
             </p>
             <p className="text-slate-500 text-sm bg-slate-200 border border-slate-500 rounded-full inline-block py-1 px-4 mt-4">
-              1h20 d'activité à prévoir
+              1h20 d&apos;activité à prévoir
             </p>
           </div>
           <div className="mt-4">
@@ -215,7 +215,7 @@ export default function NosStagesPage() {
               className="inline-block hover:underline"
             >
               <h3 className="font-bold text-2xl text-slate-800">
-                Baptême Parapente "Durée"
+                Baptême Parapente &quot;Durée&quot;
               </h3>
             </Link>
             <p
@@ -229,7 +229,7 @@ export default function NosStagesPage() {
           </div>
           <p className="text-slate-800 mt-4">
             Pour les personnes au cœur bien accroché ou ayant déjà réalisé un
-            vol en parapente. Un vol d'une trentaine de minutes en se laissant
+            vol en parapente. Un vol d&apos;une trentaine de minutes en se laissant
             porter par les vents ascendants pour découvrir la vallée et voir les
             sommets environnants.
           </p>
@@ -244,7 +244,7 @@ export default function NosStagesPage() {
               30 minutes de vol
             </p>
             <p className="text-slate-500 text-sm bg-slate-200 border border-slate-500 rounded-full inline-block py-1 px-4 mt-4">
-              Pour un public à l'aise en l'air / fan d'adrénaline
+              Pour un public à l&apos;aise en l&apos;air / fan d&apos;adrénaline
             </p>
           </div>
           <div className="mt-4">
@@ -280,7 +280,7 @@ export default function NosStagesPage() {
               className="inline-block hover:underline"
             >
               <h3 className="font-bold text-2xl text-slate-800">
-                Baptême Parapente "Longue Durée"
+                Baptême Parapente &quot;Longue Durée&quot;
               </h3>
             </Link>
             <p
@@ -293,7 +293,7 @@ export default function NosStagesPage() {
             </p>
           </div>
           <p className="text-slate-800 mt-4">
-            Pour ceux qui veulent prolonger le plaisir et s'offrir un moment
+            Pour ceux qui veulent prolonger le plaisir et s&apos;offrir un moment
             suspendu dans les airs. Environ 45 minutes de vol pour explorer plus
             loin, flirter avec les sommets et profiter pleinement des courants
             ascendants. Sensations et panoramas garantis, le tout à votre
@@ -343,7 +343,7 @@ export default function NosStagesPage() {
               className="inline-block hover:underline"
             >
               <h3 className="font-bold text-2xl text-slate-800">
-                Baptême Parapente "Enfant"
+                Baptême Parapente &quot;Enfant&quot;
               </h3>
             </Link>
             <p
@@ -352,13 +352,13 @@ export default function NosStagesPage() {
                 "after:content-[''] after:absolute after:left-0 after:top-0 after:block after:w-1 after:h-full after:bg-blue-600 pl-4",
               )}
             >
-              Pour les p'tits loups dans l'aventure et la montagne
+              Pour les p&apos;tits loups dans l&apos;aventure et la montagne
             </p>
           </div>
           <p className="text-slate-800 mt-4">
-            Un vol ludique en air calme, au petit matin, d'une dizaine de
+            Un vol ludique en air calme, au petit matin, d&apos;une dizaine de
             minutes. Parfaitement adapté aux enfants, leur permettant de
-            s'immerger dans le monde aérien. Selon leur confiance, ils peuvent
+            s&apos;immerger dans le monde aérien. Selon leur confiance, ils peuvent
             prendre les commandes durant une partie du vol.
           </p>
           <div className="flex flex-wrap gap-2">
@@ -405,7 +405,7 @@ export default function NosStagesPage() {
               className="inline-block hover:underline"
             >
               <h3 className="font-bold text-2xl text-slate-800">
-                Baptême Parapente "Hiver"
+                Baptême Parapente &quot;Hiver&quot;
               </h3>
             </Link>
             <p
@@ -419,7 +419,7 @@ export default function NosStagesPage() {
           </div>
           <p className="text-slate-800 mt-4">
             Un vol en parapente pour découvrir le domaine skiable vu du ciel.
-            Avec plus de 1000m de dénivelé vous aurez tout le loisir d'admirer
+            Avec plus de 1000m de dénivelé vous aurez tout le loisir d&apos;admirer
             les sommets enneigés.
           </p>
           <div className="flex flex-wrap gap-2">
@@ -430,7 +430,7 @@ export default function NosStagesPage() {
               25 à 95 kg
             </p>
             <p className="text-slate-500 text-sm bg-slate-200 border border-slate-500 rounded-full inline-block py-1 px-4 mt-4">
-              Durée : Le temps d'un dénivelé de 1000m
+              Durée : Le temps d&apos;un dénivelé de 1000m
             </p>
           </div>
           <div className="mt-4">
@@ -470,13 +470,13 @@ export default function NosStagesPage() {
         </Link>
         <div className="mt-8 lg:w-1/2 lg:mt-0">
           <h3 className="font-bold text-2xl text-slate-800">
-            Offrir un Baptême en Parapente, c'est offrir un souvenir
+            Offrir un Baptême en Parapente, c&apos;est offrir un souvenir
             inoubliable.
           </h3>
           <p className="text-slate-800 mt-4">
-            Anniversaire, Noël, mariage, EVG / EVJF, ou le pur plaisir d'offrir…
-            quelle que soit l'occasion, offrir un baptême parapente biplace à
-            Serre-Chevalier, c'est offrir un moment d'exception, suspendu entre
+            Anniversaire, Noël, mariage, EVG / EVJF, ou le pur plaisir d&apos;offrir…
+            quelle que soit l&apos;occasion, offrir un baptême parapente biplace à
+            Serre-Chevalier, c&apos;est offrir un moment d&apos;exception, suspendu entre
             ciel et montagnes. Une expérience forte en émotions, qui reste
             gravée à vie.
           </p>
@@ -492,7 +492,7 @@ export default function NosStagesPage() {
           </p>
           <div className="flex flex-wrap gap-2">
             <p className="text-slate-500 text-sm bg-slate-200 border border-slate-500 rounded-full inline-block py-1 px-4 mt-4">
-              Bon valable 12 mois à compter de la date d'achat
+              Bon valable 12 mois à compter de la date d&apos;achat
             </p>
             <p className="text-slate-500 text-sm bg-slate-200 border border-slate-500 rounded-full inline-block py-1 px-4 mt-4">
               Non remboursable, non annulable
@@ -502,7 +502,7 @@ export default function NosStagesPage() {
             <Link href="/reserver/bon-cadeau" className="inline-block">
               <Button variant="default" size={"lg"} className="gap-2">
                 <ChevronRightIcon size={16} />
-                J'offre un bon cadeau baptême
+                J&apos;offre un bon cadeau baptême
               </Button>
             </Link>
           </div>
@@ -707,7 +707,7 @@ export default function NosStagesPage() {
             ></iframe>
           </div>
           <p className="text-sm text-slate-600 mt-2 text-center">
-            Briançon - Porte d'entrée du Parc National des Écrins
+            Briançon - Porte d&apos;entrée du Parc National des Écrins
           </p>
         </div>
       </section>

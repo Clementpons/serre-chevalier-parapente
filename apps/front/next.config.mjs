@@ -1,4 +1,8 @@
 export default {
+  eslint: {
+    // Le lint est vérifié par le hook pre-push (pnpm check), pas pendant le build
+    ignoreDuringBuilds: true,
+  },
   async rewrites() {
     return [
       {
