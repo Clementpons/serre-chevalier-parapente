@@ -310,7 +310,7 @@ export default function PublicLayout({
                   asChild
                 >
                   <Link
-                    href="https://serreche-parapente-backoffice.vercel.app"
+                    href="https://backoffice.serre-chevalier-parapente.fr"
                     target="_blank"
                     className="hover:text-slate-50/70 transition"
                   >
