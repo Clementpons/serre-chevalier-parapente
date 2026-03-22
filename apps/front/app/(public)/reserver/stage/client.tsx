@@ -1,19 +1,13 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useMemo, useRef, Suspense } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -21,36 +15,38 @@ import {
   Users,
   Clock,
   ChevronRight,
+  ChevronLeft,
   ArrowLeft,
+  ArrowRight,
   ShoppingCart,
-  Plus,
   Gift,
   Loader2,
-  CheckCircle,
-  XCircle,
+  X,
+  Check,
 } from "lucide-react";
-import { useAvailability } from "@/hooks/useAvailability";
 import { useStagePrices } from "@/hooks/useStagePrices";
 import { SessionManager } from "@/lib/sessionManager";
 import { useToast } from "@/components/ui/use-toast";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 interface StageCategory {
   id: string;
   name: string;
   price: number;
-  description: string;
   duration: number;
+  durationDays: number;
+  description: string;
 }
 
 interface Stage {
@@ -59,6 +55,7 @@ interface Stage {
   duration: number;
   places: number;
   price: number;
+  acomptePrice?: number | null;
   type: string;
   promotionOriginalPrice?: number | null;
 }
@@ -72,1458 +69,1375 @@ interface ParticipantFormData {
   weight: number;
   height: number;
   birthDate?: string;
-  giftVoucherCode?: string;
 }
+
+interface AvailData {
+  available: boolean;
+  availablePlaces: number;
+}
+
+interface WeekEventSegment {
+  stage: Stage;
+  colStart: number; // 1–7 (Mon=1)
+  colEnd: number;   // 1–7 inclusive
+  isContinuation: boolean;
+  continuesNext: boolean;
+  rowIndex: number;
+}
+
+interface CalDay {
+  date: Date;
+  key: string;
+  isPast: boolean;
+  isOutOfMonth: boolean;
+}
+
+interface WeekData {
+  days: CalDay[];
+  events: WeekEventSegment[];
+  maxRowIndex: number;
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const STAGE_CATEGORIES: StageCategory[] = [
   {
     id: "INITIATION",
     name: "Stage Initiation",
-    price: 0, // replaced at runtime by useStagePrices
-    description:
-      "Le stage d'initiation au parapente de 5 jours est destiné aux débutants, vous permettant de découvrir les sensations du vol libre et de réaliser votre premier vol solo en toute sécurité, encadré par des moniteurs expérimentés, dans les montagnes du Briançonnais et du parc des Écrins.",
+    price: 0,
     duration: 5,
+    durationDays: 7,
+    description: "Découvrez le vol en parapente avec une équipe de professionnels.",
   },
   {
     id: "PROGRESSION",
     name: "Stage Progression",
     price: 0,
-    description:
-      "Le stage progression de 5 jours est destiné aux pilotes de parapente débutants souhaitant perfectionner leurs techniques de décollage, d'atterrissage et de vol, avec pour objectif de voler en solo en toute confiance et liberté, dans les cieux alpins.",
     duration: 5,
+    durationDays: 7,
+    description: "Vous avez déjà volé ? Devenez désormais autonome en vol durant ce stage.",
   },
   {
     id: "AUTONOMIE",
     name: "Stage Autonomie",
     price: 0,
-    description:
-      "Le stage autonomie de 10 jours combine initiation et progression pour vous permettre de devenir un pilote de parapente autonome, prêt à explorer les sommets en toute liberté, dans le cadre spectaculaire des Hautes-Alpes.",
-    duration: 5,
+    duration: 10,
+    durationDays: 14,
+    description: "Découvrez le parapente et devenez autonome durant un seul et même stage.",
   },
 ];
 
-const MONTHS = [
-  { value: 1, label: "Janvier" },
-  { value: 2, label: "Février" },
-  { value: 3, label: "Mars" },
-  { value: 4, label: "Avril" },
-  { value: 5, label: "Mai" },
-  { value: 6, label: "Juin" },
-  { value: 7, label: "Juillet" },
-  { value: 8, label: "Août" },
-  { value: 9, label: "Septembre" },
-  { value: 10, label: "Octobre" },
-  { value: 11, label: "Novembre" },
-  { value: 12, label: "Décembre" },
+const ALL_STAGE_IDS = STAGE_CATEGORIES.map((c) => c.id);
+
+const MONTH_NAMES = [
+  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
 ];
 
-function StageReservationPageContent() {
+const DAY_NAMES = ["Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam.", "Dim."];
 
+const TYPE_CONFIG: Record<
+  string,
+  { bgBar: string; bgLight: string; bgBarHex: string; badgeClass: string; label: string; borderClass: string; textClass: string; dotClass: string }
+> = {
+  INITIATION: {
+    bgBar: "bg-sky-400",
+    bgBarHex: "#38bdf8",
+    bgLight: "bg-sky-50",
+    badgeClass: "bg-sky-100 text-sky-800 border-sky-200",
+    label: "Initiation",
+    borderClass: "border-sky-400",
+    textClass: "text-sky-600",
+    dotClass: "bg-sky-400",
+  },
+  PROGRESSION: {
+    bgBar: "bg-blue-500",
+    bgBarHex: "#3b82f6",
+    bgLight: "bg-blue-50",
+    badgeClass: "bg-blue-100 text-blue-800 border-blue-200",
+    label: "Progression",
+    borderClass: "border-blue-500",
+    textClass: "text-blue-700",
+    dotClass: "bg-blue-500",
+  },
+  AUTONOMIE: {
+    bgBar: "bg-blue-800",
+    bgBarHex: "#1e40af",
+    bgLight: "bg-blue-50",
+    badgeClass: "bg-blue-100 text-blue-900 border-blue-300",
+    label: "Autonomie",
+    borderClass: "border-blue-800",
+    textClass: "text-blue-900",
+    dotClass: "bg-blue-800",
+  },
+  DOUBLE: {
+    bgBar: "bg-violet-500",
+    bgBarHex: "#8b5cf6",
+    bgLight: "bg-violet-50",
+    badgeClass: "bg-violet-100 text-violet-800 border-violet-200",
+    label: "Initiation + Progression",
+    borderClass: "border-violet-400",
+    textClass: "text-violet-700",
+    dotClass: "bg-violet-500",
+  },
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function getDateKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function formatDateLong(dateString: string): string {
+  const date = new Date(dateString);
+  const s = date.toLocaleDateString("fr-FR", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric",
+  });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/** "Samedi 25 Avril 2026" — weekday + day + month + year, all words capitalized */
+function formatDateFull(dateString: string): string {
+  const date = new Date(dateString);
+  return date
+    .toLocaleDateString("fr-FR", {
+      weekday: "long",
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    })
+    .split(" ")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+function formatDateShort(date: Date): string {
+  return date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+}
+
+/** 0 = Monday … 6 = Sunday */
+function getDOWMon(date: Date): number {
+  const d = date.getDay();
+  return d === 0 ? 6 : d - 1;
+}
+
+function stageMatchesTypes(stage: Stage, selectedTypes: string[]): boolean {
+  return selectedTypes.some((type) => {
+    if (stage.type === type) return true;
+    if (stage.type === "DOUBLE" && (type === "INITIATION" || type === "PROGRESSION")) return true;
+    return false;
+  });
+}
+
+function initTypesFromParam(param: string | null): string[] {
+  if (!param || param === "all") return ALL_STAGE_IDS;
+  const types = param.split(",").filter((t) => ALL_STAGE_IDS.includes(t));
+  return types.length > 0 ? types : ALL_STAGE_IDS;
+}
+
+// ─── Gift Voucher Banner ──────────────────────────────────────────────────────
+
+function GiftVoucherBanner() {
+  const [visible, setVisible] = useState(true);
+  if (!visible) return null;
+  return (
+    <div className="flex items-center gap-3 justify-between bg-cyan-50 border border-cyan-200 rounded-xl px-4 py-3">
+      <div className="flex items-center gap-2 min-w-0">
+        <Gift className="w-5 h-5 text-cyan-600 shrink-0" />
+        <p className="text-sm text-cyan-800 font-medium">
+          Vous avez un bon cadeau ? Utilisez-le dès maintenant.
+        </p>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <Link href="/utiliser-bon-cadeau">
+          <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700 gap-1 text-xs hidden sm:flex">
+            Utiliser mon bon cadeau <ArrowRight className="w-3 h-3" />
+          </Button>
+          <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700 text-xs sm:hidden">
+            Utiliser
+          </Button>
+        </Link>
+        <button
+          onClick={() => setVisible(false)}
+          className="p-1 text-cyan-500 hover:text-cyan-800 transition-colors rounded"
+          aria-label="Fermer"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Step Indicator ───────────────────────────────────────────────────────────
+
+function StepIndicator({ currentStep }: { currentStep: 1 | 2 }) {
+  return (
+    <div className="flex items-center justify-center gap-2 py-2">
+      <div className="flex items-center gap-2">
+        <div className={cn(
+          "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all",
+          currentStep >= 1 ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-500",
+        )}>
+          {currentStep > 1 ? <Check className="w-4 h-4" /> : "1"}
+        </div>
+        <span className={cn("text-sm font-medium", currentStep >= 1 ? "text-blue-700" : "text-slate-400")}>
+          Choisir un créneau
+        </span>
+      </div>
+      <div className={cn("h-0.5 w-8 mx-1 transition-colors", currentStep >= 2 ? "bg-blue-600" : "bg-slate-200")} />
+      <div className="flex items-center gap-2">
+        <div className={cn(
+          "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all",
+          currentStep >= 2 ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-500",
+        )}>
+          2
+        </div>
+        <span className={cn("text-sm font-medium", currentStep >= 2 ? "text-blue-700" : "text-slate-400")}>
+          Vos informations
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Stage Dialog Content ─────────────────────────────────────────────────────
+
+function StageDialogContent({
+  stage,
+  availability,
+  onSelect,
+  onClose,
+}: {
+  stage: Stage;
+  availability: AvailData | null | undefined;
+  onSelect: () => void;
+  onClose: () => void;
+}) {
+  const cfg = TYPE_CONFIG[stage.type];
+  const isAvailable = availability?.available ?? true;
+  const availablePlaces = availability?.availablePlaces ?? stage.places;
+  const isOnSale = stage.promotionOriginalPrice && stage.price < stage.promotionOriginalPrice;
+  const endDate = new Date(stage.startDate);
+  endDate.setDate(endDate.getDate() + stage.duration - 1);
+  const availLoading = availability === undefined;
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2 text-xl">
+          {cfg && <span className={cn("inline-block w-3 h-3 rounded-sm shrink-0", cfg.bgBar)} />}
+          {cfg?.label ?? stage.type}
+        </DialogTitle>
+        <DialogDescription className="text-sm text-slate-500">
+          {formatDateLong(stage.startDate)}
+        </DialogDescription>
+      </DialogHeader>
+
+      <div className="space-y-4 mt-3">
+        {/* Info grid */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-slate-50 rounded-xl p-3">
+            <p className="text-xs text-slate-500 font-medium uppercase mb-1">Fin du stage</p>
+            <p className="text-sm font-semibold text-slate-800">
+              {endDate.toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}
+            </p>
+            <p className="text-xs text-slate-400">{stage.duration} jours</p>
+          </div>
+          <div className="bg-slate-50 rounded-xl p-3 text-right">
+            <p className="text-xs text-slate-500 font-medium uppercase mb-1">Prix</p>
+            {isOnSale && (
+              <p className="text-xs text-slate-400 line-through">{stage.promotionOriginalPrice}€</p>
+            )}
+            <p className="font-bold text-2xl text-blue-600">{stage.price}€</p>
+            {isOnSale && <Badge variant="destructive" className="text-xs">PROMO</Badge>}
+          </div>
+        </div>
+
+        {/* Places */}
+        <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl">
+          <Users className="w-4 h-4 text-slate-400 shrink-0" />
+          {availLoading ? (
+            <span className="text-sm text-slate-400 flex items-center gap-1.5">
+              <Loader2 className="w-3 h-3 animate-spin" /> Vérification des disponibilités…
+            </span>
+          ) : (
+            <Badge variant={isAvailable ? "default" : "destructive"}>
+              {isAvailable
+                ? `${availablePlaces} place${availablePlaces > 1 ? "s" : ""} disponible${availablePlaces > 1 ? "s" : ""}`
+                : "Complet — aucune place disponible"}
+            </Badge>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={onClose} className="flex-1">
+            Retour
+          </Button>
+          <Button onClick={onSelect} disabled={!isAvailable || availLoading} className="flex-1 gap-2">
+            Choisir ce créneau
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── Stage Calendar ───────────────────────────────────────────────────────────
+
+function StageCalendar({
+  selectedTypes,
+  onSlotSelect,
+  selectedSlot,
+  onStagesAccumulated,
+  onViewDateChange,
+}: {
+  selectedTypes: string[];
+  onSlotSelect: (slot: Stage) => void;
+  selectedSlot: Stage | null;
+  onStagesAccumulated: (stages: Stage[]) => void;
+  onViewDateChange?: (date: Date) => void;
+}) {
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+
+  const todayKey = getDateKey(today);
+
+  const [viewDate, setViewDate] = useState<Date>(
+    () => new Date(today.getFullYear(), today.getMonth(), 1),
+  );
+  const [dialogStage, setDialogStage] = useState<Stage | null>(null);
+  const [hoveredStageId, setHoveredStageId] = useState<string | null>(null);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
+  const [tooltipStage, setTooltipStage] = useState<{
+    stage: Stage;
+    avail: AvailData | null | undefined;
+  } | null>(null);
+  const [availabilityMap, setAvailabilityMap] = useState<Record<string, AvailData | null>>({});
+  const [loadingAvail, setLoadingAvail] = useState(false);
+
+  // Per-month stage cache: key = "YYYY-M-types"
+  const stageCache = useRef<Map<string, Stage[]>>(new Map());
+  const [localStages, setLocalStages] = useState<Stage[]>([]);
+  const [loadingStages, setLoadingStages] = useState(false);
+
+  const typesKey = selectedTypes.join(",");
+
+  // Fetch stages for the currently visible month (with cache)
+  useEffect(() => {
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+    const cacheKey = `${year}-${month}-${typesKey}`;
+
+    if (stageCache.current.has(cacheKey)) {
+      setLocalStages(stageCache.current.get(cacheKey)!);
+      return;
+    }
+
+    const ctrl = new AbortController();
+    setLoadingStages(true);
+
+    const from = new Date(year, month, 1).toISOString().split("T")[0];
+    const to   = new Date(year, month + 1, 0).toISOString().split("T")[0];
+
+    // Include DOUBLE when INITIATION or PROGRESSION are selected
+    const apiTypes = [...selectedTypes];
+    if (
+      selectedTypes.includes("INITIATION") ||
+      selectedTypes.includes("PROGRESSION")
+    ) {
+      if (!apiTypes.includes("DOUBLE")) apiTypes.push("DOUBLE");
+    }
+
+    const params = new URLSearchParams({ from, to, types: apiTypes.join(",") });
+
+    fetch(
+      `${process.env.NEXT_PUBLIC_BACKOFFICE_URL}/api/stages?${params}`,
+      {
+        signal: ctrl.signal,
+        headers: { "x-api-key": process.env.NEXT_PUBLIC_API_KEY || "" },
+      },
+    )
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.success) return;
+        const stages: Stage[] = data.data;
+        stageCache.current.set(cacheKey, stages);
+        setLocalStages(stages);
+
+        // Bubble all cached stages up to parent for StatsSummary
+        const deduped = new Map<string, Stage>();
+        stageCache.current.forEach((monthStages) =>
+          monthStages.forEach((s) => deduped.set(s.id, s)),
+        );
+        onStagesAccumulated(Array.from(deduped.values()));
+      })
+      .catch((err) => {
+        if (err.name !== "AbortError")
+          console.error("Erreur chargement stages:", err);
+      })
+      .finally(() => setLoadingStages(false));
+
+    return () => ctrl.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [`${viewDate.getFullYear()}-${viewDate.getMonth()}`, typesKey]);
+
+  // Filter to stages that overlap with the current view and match selected types
+  const filteredStages = useMemo(() => {
+    return localStages
+      .filter((s) => {
+        const d = new Date(s.startDate);
+        d.setHours(0, 0, 0, 0);
+        return d >= today && stageMatchesTypes(s, selectedTypes);
+      })
+      .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+  }, [localStages, selectedTypes, today]);
+
+  // Batch-fetch availability for all visible stages (1 request)
+  const stagesKey = filteredStages.map((s) => s.id).join(",");
+  useEffect(() => {
+    if (filteredStages.length === 0) {
+      setAvailabilityMap({});
+      return;
+    }
+    setLoadingAvail(true);
+    const ctrl = new AbortController();
+
+    fetch(`${process.env.NEXT_PUBLIC_BACKOFFICE_URL}/api/availability/check-batch`, {
+      method: "POST",
+      signal: ctrl.signal,
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.NEXT_PUBLIC_API_KEY || "",
+      },
+      body: JSON.stringify({ items: filteredStages.map((s) => ({ type: "stage", itemId: s.id })) }),
+    })
+      .then((r) => r.json())
+      .then((data) => { if (data.success) setAvailabilityMap(data.data); })
+      .catch(() => {})
+      .finally(() => setLoadingAvail(false));
+
+    return () => ctrl.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stagesKey]);
+
+  // Build flat calendar days (including out-of-month days for grid padding)
+  const calendarDays = useMemo((): CalDay[] => {
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    let startDow = firstDay.getDay();
+    startDow = startDow === 0 ? 6 : startDow - 1;
+
+    const days: CalDay[] = [];
+
+    // Preceding month days
+    const prevMonthLastDay = new Date(year, month, 0).getDate();
+    for (let i = startDow - 1; i >= 0; i--) {
+      const date = new Date(year, month - 1, prevMonthLastDay - i);
+      date.setHours(0, 0, 0, 0);
+      days.push({ date, key: getDateKey(date), isPast: date < today, isOutOfMonth: true });
+    }
+
+    // Current month days
+    for (let d = 1; d <= lastDay.getDate(); d++) {
+      const date = new Date(year, month, d);
+      date.setHours(0, 0, 0, 0);
+      days.push({ date, key: getDateKey(date), isPast: date < today, isOutOfMonth: false });
+    }
+
+    // Following month days
+    let nextDay = 1;
+    while (days.length % 7 !== 0) {
+      const date = new Date(year, month + 1, nextDay++);
+      date.setHours(0, 0, 0, 0);
+      days.push({ date, key: getDateKey(date), isPast: date < today, isOutOfMonth: true });
+    }
+
+    return days;
+  }, [viewDate, today]);
+
+  // Group into weeks with event segments
+  const weeksData = useMemo((): WeekData[] => {
+    const chunks: (typeof calendarDays[number])[][] = [];
+    for (let i = 0; i < calendarDays.length; i += 7) chunks.push(calendarDays.slice(i, i + 7));
+
+    return chunks.map((weekDays) => {
+      const firstActual = weekDays[0];
+
+      // Compute Monday of this week
+      const weekMonday = new Date(firstActual.date);
+      weekMonday.setDate(weekMonday.getDate() - getDOWMon(weekMonday));
+      weekMonday.setHours(0, 0, 0, 0);
+      const weekSunday = new Date(weekMonday);
+      weekSunday.setDate(weekSunday.getDate() + 6);
+      weekSunday.setHours(0, 0, 0, 0);
+
+      // Find overlapping stages
+      const overlapping = filteredStages.filter((stage) => {
+        const s = new Date(stage.startDate); s.setHours(0, 0, 0, 0);
+        const e = new Date(stage.startDate); e.setDate(e.getDate() + stage.duration - 1); e.setHours(0, 0, 0, 0);
+        return e >= weekMonday && s <= weekSunday;
+      });
+
+      // Build segments
+      const segments = overlapping.map((stage) => {
+        const stageStart = new Date(stage.startDate); stageStart.setHours(0, 0, 0, 0);
+        const stageEnd = new Date(stage.startDate); stageEnd.setDate(stageEnd.getDate() + stage.duration - 1); stageEnd.setHours(0, 0, 0, 0);
+
+        const segStart = stageStart < weekMonday ? weekMonday : stageStart;
+        const segEnd   = stageEnd   > weekSunday ? weekSunday : stageEnd;
+
+        return {
+          stage,
+          colStart: getDOWMon(segStart) + 1,
+          colEnd:   getDOWMon(segEnd)   + 1,
+          isContinuation: stageStart < weekMonday,
+          continuesNext:  stageEnd   > weekSunday,
+        };
+      });
+
+      // Sort: longer spans first for stable stacking
+      segments.sort((a, b) =>
+        a.colStart - b.colStart || (b.colEnd - b.colStart) - (a.colEnd - a.colStart),
+      );
+
+      // Greedy row assignment
+      const rows: number[] = [];
+      for (let i = 0; i < segments.length; i++) {
+        let row = 0;
+        let conflict = true;
+        while (conflict) {
+          conflict = false;
+          for (let j = 0; j < i; j++) {
+            if (
+              rows[j] === row &&
+              segments[j].colStart <= segments[i].colEnd &&
+              segments[j].colEnd   >= segments[i].colStart
+            ) { conflict = true; break; }
+          }
+          if (conflict) row++;
+        }
+        rows.push(row);
+      }
+
+      const events: WeekEventSegment[] = segments.map((s, i) => ({ ...s, rowIndex: rows[i] }));
+      const maxRowIndex = events.reduce((m, e) => Math.max(m, e.rowIndex), -1);
+      return { days: weekDays, events, maxRowIndex };
+    });
+  }, [calendarDays, filteredStages]);
+
+  const hasAnyStages = filteredStages.length > 0;
+  const currentMonthHasStages = weeksData.some((w) => w.events.length > 0);
+
+  return (
+    <>
+      <div className="relative space-y-3">
+
+        {/* Loading overlay (disables calendar without hiding it) */}
+        {loadingStages && (
+          <div className="absolute inset-0 z-30 bg-white/60 backdrop-blur-[1px] rounded-xl flex items-center justify-center pointer-events-auto">
+            <div className="flex items-center gap-2 bg-white rounded-full px-4 py-2 shadow-md border border-slate-200">
+              <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+              <span className="text-sm text-slate-600 font-medium">Chargement…</span>
+            </div>
+          </div>
+        )}
+
+        {/* Navigation */}
+        <div className="flex items-center justify-between">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const d = new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1);
+              setViewDate(d);
+              onViewDateChange?.(d);
+            }}
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-base sm:text-lg text-slate-800 capitalize">
+              {MONTH_NAMES[viewDate.getMonth()]} {viewDate.getFullYear()}
+            </h3>
+            {loadingAvail && <Loader2 className="w-4 h-4 animate-spin text-slate-400" />}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const d = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1);
+              setViewDate(d);
+              onViewDateChange?.(d);
+            }}
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {/* Grid */}
+        <div className="border border-slate-200 rounded-xl overflow-hidden text-sm">
+
+          {/* Day-name header */}
+          <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-200">
+            {DAY_NAMES.map((day) => (
+              <div
+                key={day}
+                className="text-center text-xs font-semibold text-blue-600 py-2 border-r border-slate-200 last:border-r-0"
+              >
+                {day}
+              </div>
+            ))}
+          </div>
+
+          {/* Weeks */}
+          {weeksData.map((week, weekIdx) => (
+            <div key={weekIdx} className="relative border-b border-slate-200 last:border-b-0">
+
+              {/* Out-of-month dim overlay (pointer-events-none so bars stay clickable) */}
+              <div className="absolute inset-0 grid grid-cols-7 pointer-events-none z-[5]">
+                {week.days.map((day, di) => (
+                  <div key={di} className={day.isOutOfMonth ? "bg-slate-200/70" : ""} />
+                ))}
+              </div>
+
+              {/* Date numbers */}
+              <div className="grid grid-cols-7 divide-x divide-slate-100">
+                {week.days.map((day, di) => {
+                  const isToday = day.key === todayKey;
+                  const isSelected = selectedSlot && getDateKey(new Date(selectedSlot.startDate)) === day.key;
+                  return (
+                    <div
+                      key={di}
+                      className={cn(
+                        "text-right px-1.5 pt-1 pb-0.5 text-xs leading-none",
+                        day.isOutOfMonth
+                          ? "text-slate-300"
+                          : day.isPast
+                          ? "text-slate-400"
+                          : "text-slate-600",
+                        isToday ? "bg-blue-100 font-bold text-blue-700" : "",
+                        isSelected && !day.isOutOfMonth ? "bg-green-50" : "",
+                      )}
+                    >
+                      {day.date.getDate()}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Event bars */}
+              <div
+                className="grid grid-cols-7 px-0 pb-1.5 pt-0.5"
+                style={{
+                  gridTemplateRows: `repeat(${Math.max(week.maxRowIndex + 1, 1)}, 24px)`,
+                  rowGap: "3px",
+                  minHeight: "40px",
+                }}
+              >
+                {week.events.map((ev, ei) => {
+                  const cfg = TYPE_CONFIG[ev.stage.type];
+                  const hex = cfg?.bgBarHex ?? "#94a3b8";
+                  const avail = availabilityMap[ev.stage.id];
+                  const places = avail?.availablePlaces ?? ev.stage.places;
+                  const isAvail = avail?.available ?? true;
+                  const isSelected = selectedSlot?.id === ev.stage.id;
+                  const isHovered = hoveredStageId === ev.stage.id;
+                  const isPromo = !!(ev.stage.promotionOriginalPrice && ev.stage.price < ev.stage.promotionOriginalPrice);
+                  const discountPct = isPromo
+                    ? Math.round((1 - ev.stage.price / (ev.stage.promotionOriginalPrice as number)) * 100)
+                    : 0;
+
+                  const borderL = ev.isContinuation ? "none" : `1.5px solid ${hex}`;
+                  const borderR = ev.continuesNext  ? "none" : `1.5px solid ${hex}`;
+                  const borderTB = `1.5px solid ${hex}`;
+                  const radiusL = ev.isContinuation ? "0" : "4px";
+                  const radiusR = ev.continuesNext  ? "0" : "4px";
+
+                  return (
+                    <button
+                      key={`${ev.stage.id}-${ei}`}
+                      type="button"
+                      onClick={() => setDialogStage(ev.stage)}
+                      onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
+                      onMouseEnter={() => {
+                        setHoveredStageId(ev.stage.id);
+                        setTooltipStage({ stage: ev.stage, avail: availabilityMap[ev.stage.id] });
+                      }}
+                      onMouseLeave={() => {
+                        setHoveredStageId(null);
+                        setTooltipStage(null);
+                        setMousePos(null);
+                      }}
+                      style={{
+                        gridColumn: `${ev.colStart} / ${ev.colEnd + 1}`,
+                        gridRow: ev.rowIndex + 1,
+                        backgroundColor: isHovered || isSelected ? hex : `${hex}18`,
+                        borderTop: borderTB,
+                        borderBottom: borderTB,
+                        borderLeft: borderL,
+                        borderRight: borderR,
+                        borderRadius: `${radiusL} ${radiusR} ${radiusR} ${radiusL}`,
+                        color: isHovered || isSelected ? "#ffffff" : hex,
+                        outline: isHovered || isSelected ? `2px solid ${hex}` : "none",
+                        outlineOffset: "-1px",
+                        marginLeft: ev.isContinuation ? "0" : "2px",
+                        marginRight: ev.continuesNext  ? "0" : "2px",
+                        opacity: !isAvail ? 0.55 : 1,
+                      }}
+                      className={cn(
+                        "flex items-center overflow-hidden text-xs font-semibold",
+                        "transition-all duration-100 cursor-pointer select-none",
+                        "focus-visible:outline-none",
+                      )}
+                    >
+                      {!ev.isContinuation && (
+                        <span className="truncate px-1.5 leading-none whitespace-nowrap">
+                          {cfg?.label}
+                          {avail !== undefined && (
+                            <span className="font-normal opacity-80">
+                              {isAvail
+                                ? ` — ${places} place${places > 1 ? "s" : ""}`
+                                : " — Complet"}
+                            </span>
+                          )}
+                          {isPromo && (
+                            <span
+                              className="ml-1 inline-flex items-center font-bold text-white rounded shrink-0"
+                              style={{ backgroundColor: "#ef4444", fontSize: "8px", padding: "1px 3px" }}
+                            >
+                              PROMO
+                            </span>
+                          )}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Legend */}
+        {hasAnyStages && (() => {
+          const usedTypes = [...new Set(filteredStages.map((s) => s.type))];
+          return (
+            <div className="flex flex-wrap gap-4 pt-1">
+              {usedTypes.map((type) => {
+                const cfg = TYPE_CONFIG[type];
+                return cfg ? (
+                  <div key={type} className="flex items-center gap-1.5">
+                    <span className={cn("inline-block w-4 h-2.5 rounded-sm shrink-0", cfg.bgBar)} />
+                    <span className="text-xs text-slate-500">{cfg.label}</span>
+                  </div>
+                ) : null;
+              })}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-slate-400">↓</span>
+                <span className="text-xs text-slate-400">Promotion</span>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Empty states */}
+        {!hasAnyStages && (
+          <div className="text-center py-10">
+            <Calendar className="w-10 h-10 mx-auto mb-3 text-slate-300" />
+            <p className="text-slate-500 text-sm">Aucun créneau disponible pour les types sélectionnés.</p>
+          </div>
+        )}
+        {hasAnyStages && !currentMonthHasStages && (
+          <p className="text-center text-sm text-slate-400 py-2">
+            Aucun créneau ce mois — naviguez avec les flèches.
+          </p>
+        )}
+      </div>
+
+      {/* Stage detail dialog */}
+      <Dialog open={!!dialogStage} onOpenChange={(open) => { if (!open) setDialogStage(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          {dialogStage && (
+            <StageDialogContent
+              stage={dialogStage}
+              availability={availabilityMap[dialogStage.id]}
+              onSelect={() => { onSlotSelect(dialogStage); setDialogStage(null); }}
+              onClose={() => setDialogStage(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Mouse-following tooltip portal */}
+      {tooltipStage && mousePos && createPortal(
+        <div
+          style={{
+            position: "fixed",
+            left: mousePos.x + 14,
+            top: mousePos.y - 10,
+            transform: "translateY(-100%)",
+            zIndex: 9999,
+            pointerEvents: "none",
+          }}
+          className="bg-white border border-slate-200 shadow-xl rounded-xl max-w-[230px]"
+        >
+          <div className="p-3 space-y-2">
+            {(() => {
+              const s = tooltipStage.stage;
+              const tcfg = TYPE_CONFIG[s.type];
+              const thex = tcfg?.bgBarHex ?? "#94a3b8";
+              const ta = tooltipStage.avail;
+              const tPlaces = ta?.availablePlaces ?? s.places;
+              const tAvail = ta?.available ?? true;
+              const tPromo = s.promotionOriginalPrice && s.price < s.promotionOriginalPrice;
+              const tStart = new Date(s.startDate);
+              const tEnd = new Date(s.startDate);
+              tEnd.setDate(tEnd.getDate() + s.duration - 1);
+              return (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: thex }} />
+                    <span className="font-semibold text-sm text-slate-800">{tcfg?.label}</span>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    {tStart.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                    {" → "}
+                    {tEnd.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    {tPromo && (
+                      <span className="text-xs text-slate-400 line-through">{s.promotionOriginalPrice}€</span>
+                    )}
+                    <span className="font-bold text-sm" style={{ color: thex }}>{s.price}€</span>
+                    {tPromo && (
+                      <span className="text-xs font-semibold text-red-500 bg-red-50 px-1 rounded">PROMO</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    {ta === undefined
+                      ? "Chargement…"
+                      : tAvail
+                      ? `${tPlaces} place${tPlaces > 1 ? "s" : ""} disponible${tPlaces > 1 ? "s" : ""}`
+                      : "Complet"}
+                  </p>
+                </>
+              );
+            })()}
+          </div>
+        </div>,
+        document.body,
+      )}
+    </>
+  );
+}
+
+// ─── Stats Summary ────────────────────────────────────────────────────────────
+
+function StatsSummary({ allStages, selectedTypes, viewDate }: { allStages: Stage[]; selectedTypes: string[]; viewDate: Date }) {
+  const startOfMonth = useMemo(() => new Date(viewDate.getFullYear(), viewDate.getMonth(), 1), [viewDate]);
+  const endOfMonth = useMemo(() => new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0), [viewDate]);
+
+  const stats = useMemo(() =>
+    selectedTypes.map((typeId) => {
+      const matching = allStages.filter((s) => {
+        const d = new Date(s.startDate); d.setHours(0, 0, 0, 0);
+        if (d < startOfMonth || d > endOfMonth) return false;
+        if (s.type === typeId) return true;
+        if (s.type === "DOUBLE" && (typeId === "INITIATION" || typeId === "PROGRESSION")) return true;
+        return false;
+      });
+      return { typeId, count: matching.length, totalPlaces: matching.reduce((sum, s) => sum + s.places, 0) };
+    }),
+  [allStages, selectedTypes, startOfMonth, endOfMonth]);
+
+  if (allStages.length === 0 || selectedTypes.length === 0) return null;
+
+  return (
+    <div className="text-sm space-y-1.5">
+      <p className="text-slate-500">
+        En <strong className="text-slate-700">{MONTH_NAMES[viewDate.getMonth()]} {viewDate.getFullYear()}</strong> :
+      </p>
+      <div className="space-y-1">
+        {stats.map(({ typeId, count, totalPlaces }) => {
+          const cfg = TYPE_CONFIG[typeId];
+          return (
+            <div key={typeId} className="flex items-center gap-2">
+              <span className={cn("inline-block w-3 h-2.5 rounded-sm shrink-0", cfg?.bgBar)} />
+              <span className="text-slate-600">
+                <strong className="text-slate-800">{count}</strong> créneau{count > 1 ? "x" : ""}{" "}
+                <strong className={cfg?.textClass}>{cfg?.label}</strong>
+                {totalPlaces > 0 && (
+                  <span className="text-slate-400"> — {totalPlaces} place{totalPlaces > 1 ? "s" : ""} au total</span>
+                )}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+function StageReservationPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
 
-  // Paramètres URL
-  const preselectedCategory = searchParams.get("stageType") as
-    | "INITIATION"
-    | "PROGRESSION"
-    | "AUTONOMIE";
-
-  //Etat de scroll de la page
   const [isScrolled, setIsScrolled] = useState(false);
-
-  // États du formulaire
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    formState: { errors },
-  } = useForm<ParticipantFormData>();
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<ParticipantFormData>();
   const [isLoading, setIsLoading] = useState(false);
 
-  // États de sélection
-  const [selectedCategory, setSelectedCategory] = useState<string>(
-    preselectedCategory || "",
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(() =>
+    initTypesFromParam(searchParams.get("stageType")),
   );
-  const [selectedYear, setSelectedYear] = useState<number | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const [accumulatedStages, setAccumulatedStages] = useState<Stage[]>([]);
+  const [calendarViewDate, setCalendarViewDate] = useState<Date>(
+    () => new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+  );
   const [selectedSlot, setSelectedSlot] = useState<Stage | null>(null);
-
-  // États pour le bon cadeau
-  const [giftVoucherCode, setGiftVoucherCode] = useState("");
-  const [isValidatingVoucher, setIsValidatingVoucher] = useState(false);
-  const [voucherValidated, setVoucherValidated] = useState(false);
-  const [voucherError, setVoucherError] = useState("");
-  const [showVoucherSuccessDialog, setShowVoucherSuccessDialog] =
-    useState(false);
-
-  // États pour l'affichage progressif
-  const [showSlots, setShowSlots] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
-  // États de données
-  const [availableYears, setAvailableYears] = useState<
-    { year: number; count: number }[]
-  >([]);
-  const [availableMonths, setAvailableMonths] = useState<
-    { month: number; count: number; hasPromo: boolean }[]
-  >([]);
-  const [slots, setSlots] = useState<Stage[]>([]);
-  const [loadingPeriods, setLoadingPeriods] = useState(false);
-  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   const { getPrice: getStagePrice, loading: pricesLoading } = useStagePrices();
   const participantType = watch("participantType");
 
-  // SetState du scroll
+  const resolveEffectiveCategory = (slot: Stage): string => {
+    if (slot.type !== "DOUBLE") return slot.type;
+    if (selectedTypes.includes("INITIATION")) return "INITIATION";
+    if (selectedTypes.includes("PROGRESSION")) return "PROGRESSION";
+    return "INITIATION";
+  };
+
   useEffect(() => {
-    const handleScroll = () => {
-      const scrollTop =
-        window.pageYOffset || document.documentElement.scrollTop;
-      setIsScrolled(scrollTop > 0);
-    };
+    const handleScroll = () =>
+      setIsScrolled((window.pageYOffset || document.documentElement.scrollTop) > 0);
     window.addEventListener("scroll", handleScroll);
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Charger les données utilisateur depuis localStorage
   useEffect(() => {
-    const savedData = localStorage.getItem("userInfo");
-    if (savedData) {
+    const saved = localStorage.getItem("userInfo");
+    if (saved) {
       try {
-        const parsedData = JSON.parse(savedData);
-        setValue("firstName", parsedData.firstName || "");
-        setValue("lastName", parsedData.lastName || "");
-        setValue("email", parsedData.email || "");
-        setValue("phone", parsedData.phone || "");
-        setValue("weight", parsedData.weight || "");
-        setValue("height", parsedData.height || "");
-        setValue("birthDate", parsedData.birthDate || "");
-      } catch (error) {
-        console.error(
-          "Erreur lors du chargement des données utilisateur:",
-          error,
-        );
-      }
+        const d = JSON.parse(saved);
+        setValue("firstName", d.firstName || "");
+        setValue("lastName", d.lastName || "");
+        setValue("email", d.email || "");
+        setValue("phone", d.phone || "");
+        setValue("weight", d.weight || "");
+        setValue("height", d.height || "");
+        setValue("birthDate", d.birthDate || "");
+      } catch { /* ignore */ }
     }
   }, [setValue]);
 
-  // Charger les périodes disponibles quand la catégorie change
-  useEffect(() => {
-    if (selectedCategory) {
-      loadAvailablePeriods();
-    }
-  }, [selectedCategory]);
-
-  // Mettre à jour les mois disponibles quand l'année change
-  useEffect(() => {
-    if (selectedYear && availableYears.length > 1) {
-      updateAvailableMonths();
-    }
-  }, [selectedYear]);
-
-  const updateAvailableMonths = async () => {
-    if (!selectedYear) return;
-
-    try {
-      // Récupérer tous les stages
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKOFFICE_URL}/api/stages`,
-        {
-          headers: {
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY || "",
-          },
-        },
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
-        let stages = data.data;
-
-        // Filtrer par type de stage (inclure DOUBLE pour INITIATION et PROGRESSION)
-        stages = stages.filter((stage: Stage) => {
-          if (stage.type === selectedCategory) return true;
-          if (
-            stage.type === "DOUBLE" &&
-            (selectedCategory === "INITIATION" ||
-              selectedCategory === "PROGRESSION")
-          ) {
-            return true;
-          }
-          return false;
-        });
-
-        // Filtrer les stages futurs
-        const now = new Date();
-        stages = stages.filter((stage: Stage) => {
-          const stageDate = new Date(stage.startDate);
-          return stageDate > now;
-        });
-
-        // Filtrer par année sélectionnée
-        stages = stages.filter((stage: Stage) => {
-          const date = new Date(stage.startDate);
-          return date.getFullYear() === selectedYear;
-        });
-
-        // Calculer les mois disponibles
-        const monthMap = new Map<
-          number,
-          { count: number; hasPromo: boolean }
-        >();
-        stages.forEach((stage: Stage) => {
-          const date = new Date(stage.startDate);
-          const month = date.getMonth() + 1;
-          const current = monthMap.get(month) || { count: 0, hasPromo: false };
-
-          const isPromo = stage.promotionOriginalPrice
-            ? stage.price < stage.promotionOriginalPrice
-            : false;
-
-          monthMap.set(month, {
-            count: current.count + 1,
-            hasPromo: current.hasPromo || isPromo,
-          });
-        });
-
-        const months = Array.from(monthMap.entries())
-          .map(([month, data]) => ({
-            month,
-            count: data.count,
-            hasPromo: data.hasPromo,
-          }))
-          .sort((a, b) => a.month - b.month);
-
-        setAvailableMonths(months);
-      }
-    } catch (error) {
-      console.error("Erreur mise à jour mois disponibles:", error);
-    }
-  };
-
-  // Charger les créneaux quand année/mois changent
-  useEffect(() => {
-    if (selectedYear && selectedMonth) {
-      loadAvailableSlots();
-      setShowSlots(true);
-      setShowForm(false);
-      setSelectedSlot(null);
-    }
-  }, [selectedYear, selectedMonth, selectedCategory]);
-
-  const loadAvailablePeriods = async () => {
-    try {
-      setLoadingPeriods(true);
-
-      // Récupérer tous les stages
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKOFFICE_URL}/api/stages`,
-        {
-          headers: {
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY || "",
-          },
-        },
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
-        let stages = data.data;
-
-        // Filtrer par type de stage (inclure DOUBLE pour INITIATION et PROGRESSION)
-        stages = stages.filter((stage: Stage) => {
-          if (stage.type === selectedCategory) return true;
-          if (
-            stage.type === "DOUBLE" &&
-            (selectedCategory === "INITIATION" ||
-              selectedCategory === "PROGRESSION")
-          ) {
-            return true;
-          }
-          return false;
-        });
-
-        // Filtrer les stages futurs
-        const now = new Date();
-        stages = stages.filter((stage: Stage) => {
-          const stageDate = new Date(stage.startDate);
-          return stageDate > now;
-        });
-
-        // Calculer les années et mois disponibles
-        const yearMonthMap = new Map<
-          number,
-          Map<number, { count: number; hasPromo: boolean }>
-        >();
-
-        stages.forEach((stage: Stage) => {
-          const date = new Date(stage.startDate);
-          const year = date.getFullYear();
-          const month = date.getMonth() + 1;
-
-          if (!yearMonthMap.has(year)) {
-            yearMonthMap.set(year, new Map());
-          }
-
-          const monthMap = yearMonthMap.get(year)!;
-          const current = monthMap.get(month) || { count: 0, hasPromo: false };
-
-          const isPromo = stage.promotionOriginalPrice
-            ? stage.price < stage.promotionOriginalPrice
-            : false;
-
-          monthMap.set(month, {
-            count: current.count + 1,
-            hasPromo: current.hasPromo || isPromo,
-          });
-        });
-
-        // Convertir en format attendu
-        const years = Array.from(yearMonthMap.entries())
-          .map(([year, monthMap]) => ({
-            year,
-            count: Array.from(monthMap.values()).reduce(
-              (a, b) => a + b.count,
-              0,
-            ),
-          }))
-          .sort((a, b) => a.year - b.year);
-
-        setAvailableYears(years);
-
-        // Si une seule année disponible, la sélectionner automatiquement
-        if (years.length === 1) {
-          const year = years[0].year;
-          setSelectedYear(year);
-
-          const monthMap = yearMonthMap.get(year)!;
-          const months = Array.from(monthMap.entries())
-            .map(([month, data]) => ({
-              month,
-              count: data.count,
-              hasPromo: data.hasPromo,
-            }))
-            .sort((a, b) => a.month - b.month);
-
-          setAvailableMonths(months);
-
-          // Si un seul mois disponible, le sélectionner automatiquement
-          if (months.length === 1) {
-            setSelectedMonth(months[0].month);
-          }
-        } else if (years.length > 1 && selectedYear) {
-          const monthMap = yearMonthMap.get(selectedYear);
-          if (monthMap) {
-            const months = Array.from(monthMap.entries())
-              .map(([month, data]) => ({
-                month,
-                count: data.count,
-                hasPromo: data.hasPromo,
-              }))
-              .sort((a, b) => a.month - b.month);
-            setAvailableMonths(months);
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Erreur chargement périodes disponibles:", error);
-    } finally {
-      setLoadingPeriods(false);
-    }
-  };
-
-  const loadAvailableSlots = async () => {
-    if (!selectedYear || !selectedMonth) return;
-
-    try {
-      setLoadingSlots(true);
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKOFFICE_URL}/api/stages`,
-        {
-          headers: {
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY || "",
-          },
-        },
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
-        let filteredSlots = data.data;
-
-        // Filtrer par type de stage
-        // Les stages "DOUBLE" sont inclus pour INITIATION et PROGRESSION
-        filteredSlots = filteredSlots.filter((stage: Stage) => {
-          if (stage.type === selectedCategory) return true;
-          if (
-            stage.type === "DOUBLE" &&
-            (selectedCategory === "INITIATION" ||
-              selectedCategory === "PROGRESSION")
-          ) {
-            return true;
-          }
-          return false;
-        });
-
-        // Filtrer par année et mois
-        const startOfMonth = new Date(selectedYear, selectedMonth - 1, 1);
-        const endOfMonth = new Date(selectedYear, selectedMonth, 0, 23, 59, 59);
-
-        filteredSlots = filteredSlots.filter((slot: Stage) => {
-          const slotDate = new Date(slot.startDate);
-          return slotDate >= startOfMonth && slotDate <= endOfMonth;
-        });
-
-        // Filtrer les créneaux futurs
-        const now = new Date();
-        filteredSlots = filteredSlots.filter((slot: Stage) => {
-          const slotDate = new Date(slot.startDate);
-          return slotDate > now;
-        });
-
-        // Trier par date
-        filteredSlots.sort((a: Stage, b: Stage) => {
-          const dateA = new Date(a.startDate);
-          const dateB = new Date(b.startDate);
-          return dateA.getTime() - dateB.getTime();
-        });
-
-        setSlots(filteredSlots);
-      }
-    } catch (error) {
-      console.error("Erreur chargement créneaux:", error);
-    } finally {
-      setLoadingSlots(false);
-    }
+  const toggleType = (typeId: string) => {
+    setSelectedTypes((prev) => {
+      if (prev.includes(typeId) && prev.length === 1) return prev;
+      const next = prev.includes(typeId) ? prev.filter((t) => t !== typeId) : [...prev, typeId];
+      const param = next.length === ALL_STAGE_IDS.length ? "all" : next.join(",");
+      router.replace(`?stageType=${param}`, { scroll: false });
+      return next;
+    });
+    setSelectedSlot(null);
+    setShowForm(false);
   };
 
   const handleSlotSelect = (slot: Stage) => {
     setSelectedSlot(slot);
     setShowForm(true);
-    // Initialiser participantType à "self" par défaut
     setValue("participantType", "self");
-    // Scroll vers le formulaire
     setTimeout(() => {
-      const formElement = document.getElementById("participant-form-separator");
-      if (formElement) {
-        formElement.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
+      document
+        .getElementById("participant-form-separator")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 100);
   };
 
   const saveUserInfo = (data: ParticipantFormData) => {
-    if (participantType === "self") {
-      const userInfo = {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        phone: data.phone,
-        weight: data.weight,
-        height: data.height,
-        birthDate: data.birthDate,
-      };
-      localStorage.setItem("userInfo", JSON.stringify(userInfo));
+    if (data.participantType === "self") {
+      localStorage.setItem("userInfo", JSON.stringify({
+        firstName: data.firstName, lastName: data.lastName,
+        email: data.email, phone: data.phone,
+        weight: data.weight, height: data.height, birthDate: data.birthDate,
+      }));
     }
-  };
-
-  const validateGiftVoucher = async () => {
-    if (!giftVoucherCode.trim()) {
-      setVoucherError("Veuillez entrer un code de bon cadeau");
-      return;
-    }
-
-    setIsValidatingVoucher(true);
-    setVoucherError("");
-
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKOFFICE_URL}/api/giftvouchers/validate`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY || "",
-          },
-          body: JSON.stringify({
-            code: giftVoucherCode,
-            productType: "STAGE",
-            category: selectedCategory,
-          }),
-        },
-      );
-
-      const data = await response.json();
-
-      if (data.success && data.data.valid) {
-        setVoucherValidated(true);
-        setShowVoucherSuccessDialog(true);
-        setVoucherError("");
-      } else {
-        setVoucherError(
-          data.message || data.data?.reason || "Code de bon cadeau invalide",
-        );
-        setVoucherValidated(false);
-      }
-    } catch (error) {
-      console.error("Erreur validation bon cadeau:", error);
-      setVoucherError("Erreur lors de la validation du bon cadeau");
-      setVoucherValidated(false);
-    } finally {
-      setIsValidatingVoucher(false);
-    }
-  };
-
-  const removeVoucher = () => {
-    setVoucherValidated(false);
-    setGiftVoucherCode("");
-    setVoucherError("");
   };
 
   const onSubmit = async (data: ParticipantFormData) => {
     if (!selectedSlot) return;
-
     setIsLoading(true);
-
     try {
       saveUserInfo(data);
-
       const sessionId = SessionManager.getOrCreateSessionId();
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKOFFICE_URL}/api/cart/items`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-session-id": sessionId,
-            "x-api-key": process.env.NEXT_PUBLIC_API_KEY || "",
-          },
-          body: JSON.stringify({
-            type: "STAGE",
-            itemId: selectedSlot.id,
-            participantData: {
-              ...data,
-              weight: Number(data.weight),
-              height: Number(data.height),
-              selectedStageType: selectedCategory,
-              usedGiftVoucherCode: voucherValidated
-                ? giftVoucherCode
-                : undefined,
-            },
-            quantity: 1,
-          }),
+      const effectiveCategory = resolveEffectiveCategory(selectedSlot);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKOFFICE_URL}/api/cart/items`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-session-id": sessionId,
+          "x-api-key": process.env.NEXT_PUBLIC_API_KEY || "",
         },
-      );
-
-      const result = await response.json();
-
+        body: JSON.stringify({
+          type: "STAGE",
+          itemId: selectedSlot.id,
+          participantData: {
+            ...data,
+            weight: Number(data.weight), height: Number(data.height),
+            selectedStageType: effectiveCategory,
+          },
+          quantity: 1,
+        }),
+      });
+      const result = await res.json();
       if (result.success) {
-        // Déclencher un événement pour rafraîchir le panier
         window.dispatchEvent(new CustomEvent("cartUpdated"));
-
-        // Afficher un toast informatif sur le blocage de la place
-        toast({
-          title: "Place réservée temporairement",
-          description:
-            "Cette place est bloquée pendant 1h00. Finalisez votre paiement pour confirmer la réservation.",
-          duration: 5000,
-        });
-
-        // Afficher la popup de confirmation
+        toast({ title: "Place réservée temporairement", description: "Cette place est bloquée pendant 1h00.", duration: 5000 });
         setShowSuccessDialog(true);
       } else {
-        toast({
-          title: "Erreur",
-          description: result.message || "Erreur lors de l'ajout au panier",
-          variant: "destructive",
-        });
+        toast({ title: "Erreur", description: result.message || "Erreur lors de l'ajout au panier", variant: "destructive" });
       }
-    } catch (error) {
-      console.error("Erreur ajout panier:", error);
-      toast({
-        title: "Erreur",
-        description: "Erreur lors de l'ajout au panier",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    } catch {
+      toast({ title: "Erreur", description: "Erreur lors de l'ajout au panier", variant: "destructive" });
+    } finally { setIsLoading(false); }
   };
 
-  const getCategoryLabel = (category: string) => {
-    const labels: Record<string, string> = {
-      INITIATION: "Stage Initiation",
-      PROGRESSION: "Stage Progression",
-      AUTONOMIE: "Stage Autonomie",
-    };
-    return labels[category] || category;
-  };
+  const getCategoryLabel = (cat: string) =>
+    ({ INITIATION: "Stage Initiation", PROGRESSION: "Stage Progression", AUTONOMIE: "Stage Autonomie" }[cat] ?? cat);
 
-  const getSelectedCategoryInfo = () => {
-    return STAGE_CATEGORIES.find((cat) => cat.id === selectedCategory);
-  };
-
-  const getMonthLabel = (month: number) => {
-    return MONTHS.find((m) => m.value === month)?.label || `Mois ${month}`;
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const formatted = date.toLocaleDateString("fr-FR", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
-  };
+  const effectiveCategory = selectedSlot ? resolveEffectiveCategory(selectedSlot) : "";
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <div
-        className={cn(
-          "bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm",
-          "transition-all ease-in-out duration-300",
-          isScrolled ? "pt-0 pb-0" : "pt-12 pb-4",
-        )}
-      >
-        <div className="max-w-4xl mx-auto px-4 py-4">
+      {/* Sticky header */}
+      <div className={cn(
+        "bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm transition-all ease-in-out duration-300",
+        isScrolled ? "pt-0 pb-0" : "pt-12 pb-4",
+      )}>
+        <div className="max-w-4xl mx-auto pl-16 pr-20 sm:px-4 py-4">
           <div className="flex items-center gap-4">
             <Link href="/reserver">
               <Button variant="outline" size="sm">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Retour
+                <ArrowLeft className="w-4 h-4 mr-2" /> Retour
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold text-slate-800">
+            <h1 className="text-lg sm:text-2xl font-bold text-slate-800 truncate">
               Réserver un stage
             </h1>
           </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-8 pt-24 space-y-12">
-        {/* Section 1: Sélection catégorie, année, mois */}
-        <div className="space-y-8">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold text-slate-800 mb-2">
-              Choisissez votre formule et période
-            </h2>
-            <p className="text-slate-600">
-              Sélectionnez votre type de stage et la période souhaitée
-            </p>
-          </div>
+      <div className="max-w-4xl mx-auto px-4 py-8 pt-24 space-y-6">
+        <GiftVoucherBanner />
+        <StepIndicator currentStep={showForm ? 2 : 1} />
 
-          {/* Sélection de catégorie pour les stages */}
-          <div className="space-y-4">
-            <Label className="text-lg font-semibold text-slate-800">
-              Type de stage
-            </Label>
-            <Select
-              value={selectedCategory}
-              onValueChange={(value) => {
-                setSelectedCategory(value);
-                setSelectedYear(null);
-                setSelectedMonth(null);
-                setShowSlots(false);
-                setShowForm(false);
-                setSelectedSlot(null);
-              }}
-            >
-              <SelectTrigger className="h-12 bg-white">
-                <SelectValue placeholder="Sélectionnez un type de stage" />
-              </SelectTrigger>
-              <SelectContent>
-                {STAGE_CATEGORIES.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name} — {pricesLoading ? '…' : `À partir de ${getStagePrice(category.id)}€`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {/* ── ÉTAPE 1 : calendrier (masqué en étape 2) ── */}
+        {!showForm ? (
+          <div className="space-y-5">
+            <div className="text-center">
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-2">Choisissez votre créneau</h2>
+              <p className="text-slate-600 text-sm sm:text-base">
+                Filtrez par type et cliquez sur un stage dans le calendrier
+              </p>
+            </div>
 
-            {/* Présentation de la catégorie sélectionnée */}
-            {selectedCategory && (
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1 mr-4">
-                      <h3 className="font-semibold text-xl text-blue-600 mb-2">
-                        {getSelectedCategoryInfo()?.name}
-                      </h3>
-                      <p className="text-slate-600">
-                        {getSelectedCategoryInfo()?.description}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-slate-500 uppercase font-semibold">À partir de</p>
-                      <p className="font-bold text-2xl text-blue-600">
-                        {pricesLoading ? (
-                          <span className="inline-block w-20 h-7 bg-slate-200 animate-pulse rounded" />
-                        ) : `${getStagePrice(selectedCategory)}€`}
-                      </p>
-                      <p className="text-sm text-slate-500">
-                        {getSelectedCategoryInfo()?.duration} jours
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            {/* Type checkboxes */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold text-slate-800">Filtrer par type</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {STAGE_CATEGORIES.map((cat) => {
+                  const isChecked = selectedTypes.includes(cat.id);
+                  const cfg = TYPE_CONFIG[cat.id];
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => toggleType(cat.id)}
+                      className={cn(
+                        "flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all hover:shadow-md",
+                        isChecked ? `${cfg.borderClass} ${cfg.bgLight}` : "border-slate-200 bg-white hover:border-slate-300",
+                      )}
+                    >
+                      <div className={cn(
+                        "mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-all",
+                        isChecked ? `${cfg.dotClass} border-transparent` : "border-slate-300 bg-white",
+                      )}>
+                        {isChecked && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className={cn("font-semibold text-sm", isChecked ? cfg.textClass : "text-slate-700")}>
+                            {cat.name}
+                          </p>
+                          <span className={cn(
+                            "text-[10px] font-semibold px-1.5 py-0.5 rounded-full border",
+                            isChecked ? `${cfg.badgeClass}` : "bg-slate-100 text-slate-500 border-slate-200",
+                          )}>
+                            {cat.durationDays} jours
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1 leading-snug">
+                          {cat.description}
+                        </p>
+                        <p className="text-xs text-slate-400 mt-1">
+                          {pricesLoading ? "..." : `À partir de ${getStagePrice(cat.id)}€`}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Calendar */}
+            <Card>
+              <CardContent className="p-3 sm:p-5">
+                <StageCalendar
+                  selectedTypes={selectedTypes}
+                  onSlotSelect={handleSlotSelect}
+                  selectedSlot={selectedSlot}
+                  onStagesAccumulated={setAccumulatedStages}
+                  onViewDateChange={setCalendarViewDate}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Stats below calendar */}
+            {accumulatedStages.length > 0 && (
+              <StatsSummary allStages={accumulatedStages} selectedTypes={selectedTypes} viewDate={calendarViewDate} />
             )}
           </div>
-
-          {/* Sélection année et mois */}
-          {selectedCategory && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Année */}
-              <div className="space-y-3">
-                <Label className="text-lg font-semibold text-slate-800">
-                  Année
-                </Label>
-                {loadingPeriods ? (
-                  <div className="flex items-center justify-center py-4 border rounded-lg">
-                    <Clock className="w-4 h-4 animate-spin mr-2" />
-                    <span className="text-sm">Chargement...</span>
-                  </div>
-                ) : (
-                  <>
-                    <Select
-                      value={selectedYear?.toString() || ""}
-                      onValueChange={(value) => {
-                        setSelectedYear(parseInt(value));
-                        setSelectedMonth(null);
-                        setShowSlots(false);
-                        setShowForm(false);
-                        setSelectedSlot(null);
-                      }}
-                      disabled={availableYears.length === 0}
-                    >
-                      <SelectTrigger className="h-12 bg-white">
-                        <SelectValue placeholder="Sélectionner une année" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableYears.map((yearData) => (
-                          <SelectItem
-                            key={yearData.year}
-                            value={yearData.year.toString()}
-                          >
-                            {yearData.year}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {availableYears.length === 0 && (
-                      <div className="p-3 bg-slate-100 border border-slate-300 rounded-lg text-center mt-2">
-                        <Calendar className="w-6 h-6 mx-auto mb-2 text-slate-400" />
-                        <p className="text-slate-600 font-medium text-sm">
-                          Aucun créneau disponible
-                        </p>
-                        <p className="text-xs text-slate-500 mt-1">
-                          Aucun créneau disponible pour ce type de stage
-                        </p>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-              {/* Mois */}
-              <div className="space-y-3">
-                <Label className="text-lg font-semibold text-slate-800">
-                  Mois
-                </Label>
-                <Select
-                  value={selectedMonth?.toString() || ""}
-                  onValueChange={(value) => setSelectedMonth(parseInt(value))}
-                  disabled={!selectedYear || availableMonths.length === 0}
-                >
-                  <SelectTrigger className="h-12 bg-white">
-                    <SelectValue placeholder="Sélectionner un mois" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MONTHS.map((month) => {
-                      const monthData = availableMonths.find(
-                        (m) => m.month === month.value,
-                      );
-                      const count = monthData?.count || 0;
-                      return (
-                        <SelectItem
-                          key={month.value}
-                          value={month.value.toString()}
-                          disabled={count === 0}
-                        >
-                          <div className="flex items-center justify-between w-full gap-2">
-                            <span>{month.label}</span>
-                            <Badge
-                              variant={count > 0 ? "default" : "secondary"}
-                              className={cn(
-                                "ml-2",
-                                count > 0 ? "bg-blue-600" : "bg-gray-400",
-                              )}
-                            >
-                              {count} créneau{count > 1 ? "x" : ""} disponible
-                              {count > 1 ? "s" : ""}
-                            </Badge>
-                            {monthData?.hasPromo && (
-                              <Badge
-                                variant="destructive"
-                                className="ml-2 animate-pulse"
-                              >
-                                PROMOTION
-                              </Badge>
-                            )}
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Section 2: Sélection du créneau - Affichée progressivement */}
-        {showSlots && selectedYear && selectedMonth && (
-          <>
-            <Separator />
-            <div className="space-y-8 animate-in fade-in slide-in-from-top-4 duration-500">
-              <div className="text-center">
-                <h2 className="text-3xl font-bold text-slate-800 mb-2">
-                  Choisissez votre créneau
-                </h2>
-                <p className="text-slate-600">
-                  Sélectionnez le créneau qui vous convient pour{" "}
-                  {getMonthLabel(selectedMonth)} {selectedYear}
-                </p>
-              </div>
-
-              {loadingSlots ? (
-                <div className="flex items-center justify-center py-12">
-                  <Clock className="w-6 h-6 animate-spin mr-2" />
-                  Chargement des créneaux disponibles...
-                </div>
-              ) : slots.length === 0 ? (
-                <div className="text-center py-12">
-                  <Calendar className="w-16 h-16 mx-auto mb-4 text-slate-400" />
-                  <p className="text-slate-600 text-lg">
-                    Aucun créneau disponible pour cette période
+        ) : selectedSlot && (
+          /* Résumé compact du créneau en étape 2 */
+          <Card className="border-2 border-blue-200 bg-blue-50">
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                <div>
+                  <p className="text-xs font-semibold text-blue-600 uppercase mb-1.5 flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5" /> Créneau sélectionné
                   </p>
+                  {(() => {
+                    const cfg = TYPE_CONFIG[resolveEffectiveCategory(selectedSlot)];
+                    const end = new Date(selectedSlot.startDate);
+                    end.setDate(end.getDate() + selectedSlot.duration - 1);
+                    return (
+                      <>
+                        <p className="font-bold text-sm" style={{ color: cfg?.bgBarHex }}>
+                          {cfg?.label}
+                        </p>
+                        <p className="font-semibold text-slate-800 text-sm mt-0.5">
+                          Stage du {formatDateFull(selectedSlot.startDate)} au {formatDateFull(end.toISOString())} ({selectedSlot.duration} jours)
+                        </p>
+                      </>
+                    );
+                  })()}
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {!selectedSlot ? (
-                    <>
-                      <h3 className="font-semibold text-lg text-slate-800">
-                        Créneaux disponibles
-                      </h3>
-                      <div className="grid gap-4">
-                        {slots.map((slot) => (
-                          <SlotCard
-                            key={slot.id}
-                            slot={slot}
-                            onSelect={() => handleSlotSelect(slot)}
-                          />
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    <Card className="border-2 border-blue-600">
-                      <CardContent className="p-6">
-                        <div className="flex justify-between items-start gap-4">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-lg text-slate-800 mb-3">
-                              Créneau sélectionné
-                            </h3>
-                            <div className="space-y-2">
-                              <p className="font-semibold text-lg text-slate-800">
-                                Du {formatDate(selectedSlot.startDate)}
-                              </p>
-                              <p className="text-slate-600">
-                                au{" "}
-                                {(() => {
-                                  const start = new Date(
-                                    selectedSlot.startDate,
-                                  );
-                                  const end = new Date(start);
-                                  end.setDate(
-                                    start.getDate() + selectedSlot.duration - 1,
-                                  );
-                                  return formatDate(end.toISOString());
-                                })()}{" "}
-                                ({selectedSlot.duration} jours)
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex flex-col items-end gap-3">
-                            <div className="text-right">
-                              {selectedSlot.promotionOriginalPrice &&
-                                selectedSlot.price <
-                                  selectedSlot.promotionOriginalPrice && (
-                                  <>
-                                    <Badge
-                                      variant="destructive"
-                                      className="text-xs mb-1"
-                                    >
-                                      PROMO
-                                    </Badge>
-                                    <p className="text-sm text-slate-500 line-through">
-                                      {selectedSlot.promotionOriginalPrice}€
-                                    </p>
-                                  </>
-                                )}
-                              <p className="font-bold text-2xl text-blue-600">
-                                {selectedSlot.price}€
-                              </p>
-                              <p className="text-xs text-slate-500">
-                                par participant
-                              </p>
-                            </div>
-                            <Button
-                              onClick={() => {
-                                setSelectedSlot(null);
-                                setShowForm(false);
-                              }}
-                              variant="outline"
-                              size="sm"
-                            >
-                              Modifier
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <div className="flex items-center gap-3">
+                    {selectedSlot.promotionOriginalPrice && selectedSlot.price < selectedSlot.promotionOriginalPrice && (
+                      <p className="text-sm text-slate-400 line-through">{selectedSlot.promotionOriginalPrice}€</p>
+                    )}
+                    <p className="font-bold text-2xl text-blue-600">{selectedSlot.price}€</p>
+                  </div>
+                  {selectedSlot.acomptePrice && (
+                    <p className="text-xs text-slate-500">
+                      Acompte aujourd&apos;hui : <span className="font-semibold text-slate-700">{selectedSlot.acomptePrice}€</span>
+                      {" · "}solde sur place : <span className="font-semibold text-slate-700">{selectedSlot.price - selectedSlot.acomptePrice}€</span>
+                    </p>
                   )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-1"
+                    onClick={() => { setSelectedSlot(null); setShowForm(false); }}
+                  >
+                    Changer de créneau
+                  </Button>
                 </div>
-              )}
-            </div>
-          </>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
-        {/* Section 3: Informations participant - Affichée après sélection du créneau */}
+        {/* ── ÉTAPE 2 ── */}
         {showForm && selectedSlot && (
           <>
             <Separator id="participant-form-separator" />
-            <div
-              id="participant-form"
-              className="space-y-8 animate-in fade-in slide-in-from-top-4 duration-500"
-            >
-              <div className="space-y-8">
-                <div className="text-center">
-                  <h2 className="text-3xl font-bold text-slate-800 mb-2">
-                    Vos informations
-                  </h2>
-                  <p className="text-slate-600">
-                    Renseignez les informations du participant pour finaliser la
-                    réservation
-                  </p>
+            <div id="participant-form" className="space-y-8 animate-in fade-in slide-in-from-top-4 duration-500">
+              <div className="text-center">
+                <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-2">Vos informations</h2>
+                <p className="text-slate-600 text-sm sm:text-base">
+                  Renseignez les informations du participant pour finaliser la réservation
+                </p>
+              </div>
+
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+                {/* Pour qui */}
+                <div className="space-y-4">
+                  <Label className="text-base font-semibold text-slate-800">Pour qui réservez-vous ?</Label>
+                  <RadioGroup
+                    defaultValue="self"
+                    className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+                    onValueChange={(v) => setValue("participantType", v as "self" | "other")}
+                  >
+                    {(["self", "other"] as const).map((val) => (
+                      <div key={val} className="relative">
+                        <RadioGroupItem value={val} id={val} className="peer sr-only" />
+                        <Label
+                          htmlFor={val}
+                          className={cn(
+                            "flex items-center justify-center p-5 bg-slate-50 border-2 rounded-lg cursor-pointer transition-all hover:bg-slate-100",
+                            participantType === val ? "border-blue-600 bg-blue-50 ring-2 ring-blue-200" : "border-slate-200",
+                          )}
+                        >
+                          <div className="text-center">
+                            <div className={cn("font-semibold text-base", participantType === val ? "text-blue-700" : "text-slate-800")}>
+                              {val === "self" ? "Pour moi" : "Pour quelqu'un d'autre"}
+                            </div>
+                            <div className={cn("text-xs mt-1", participantType === val ? "text-blue-600" : "text-slate-500")}>
+                              {val === "self" ? "Mes informations seront sauvegardées" : "Cadeau ou réservation tierce"}
+                            </div>
+                          </div>
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
                 </div>
 
-                {/* Récapitulatif créneau sélectionné */}
-                <Card>
-                  <CardContent className="p-6">
-                    <h3 className="font-semibold text-lg text-slate-800 mb-4">
-                      Créneau sélectionné
-                    </h3>
-                    <div className="flex justify-between items-start gap-4">
-                      <div className="flex-1">
-                        <p className="font-semibold text-lg text-slate-800">
-                          Du {formatDate(selectedSlot.startDate)}
-                        </p>
-                        <p className="text-slate-600">
-                          au{" "}
-                          {(() => {
-                            const start = new Date(selectedSlot.startDate);
-                            const end = new Date(start);
-                            end.setDate(
-                              start.getDate() + selectedSlot.duration - 1,
-                            );
-                            return formatDate(end.toISOString());
-                          })()}{" "}
-                          ({selectedSlot.duration} jours)
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        {selectedSlot.promotionOriginalPrice &&
-                          selectedSlot.price <
-                            selectedSlot.promotionOriginalPrice && (
-                            <>
-                              <Badge
-                                variant="destructive"
-                                className="text-xs mb-1"
-                              >
-                                PROMO
-                              </Badge>
-                              <p className="text-sm text-slate-500 line-through">
-                                {selectedSlot.promotionOriginalPrice}€
-                              </p>
-                            </>
-                          )}
-                        {voucherValidated ? (
-                          <div>
-                            <p className="font-bold text-xl text-gray-400 line-through">
-                              {selectedSlot.price}€
-                            </p>
-                            <p className="font-bold text-2xl text-green-600">
-                              0€
-                            </p>
-                          </div>
-                        ) : (
-                          <>
-                            <p className="font-bold text-2xl text-blue-600">
-                              {selectedSlot.price}€
-                            </p>
-                            <p className="text-xs text-slate-500">
-                              par participant
-                            </p>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-                  {/* Sélection participant */}
+                {/* Informations participant */}
+                <div className="space-y-6">
+                  <h3 className="text-base font-semibold text-slate-800">
+                    Informations {participantType === "self" ? "personnelles" : "du participant"}
+                  </h3>
                   <div className="space-y-4">
-                    <Label className="text-lg font-semibold text-slate-800">
-                      Pour qui réservez-vous ?
-                    </Label>
-                    <RadioGroup
-                      defaultValue="self"
-                      className="grid grid-cols-1 md:grid-cols-2 gap-4"
-                      onValueChange={(value) =>
-                        setValue("participantType", value as "self" | "other")
-                      }
-                    >
-                      <div className="relative">
-                        <RadioGroupItem
-                          value="self"
-                          id="self"
-                          className="peer sr-only"
-                        />
-                        <Label
-                          htmlFor="self"
-                          className={`flex items-center justify-center p-6 bg-slate-50 border-2 rounded-lg cursor-pointer transition-all hover:bg-slate-100 hover:border-slate-300 ${
-                            participantType === "self"
-                              ? "border-blue-600 bg-blue-50 ring-2 ring-blue-200"
-                              : "border-slate-200"
-                          }`}
-                        >
-                          <div className="text-center">
-                            <div
-                              className={`font-semibold text-lg ${participantType === "self" ? "text-blue-700" : "text-slate-800"}`}
-                            >
-                              Pour moi
-                            </div>
-                            <div
-                              className={`text-sm mt-1 ${participantType === "self" ? "text-blue-600" : "text-slate-600"}`}
-                            >
-                              Mes informations seront sauvegardées
-                            </div>
-                          </div>
-                        </Label>
-                      </div>
-                      <div className="relative">
-                        <RadioGroupItem
-                          value="other"
-                          id="other"
-                          className="peer sr-only"
-                        />
-                        <Label
-                          htmlFor="other"
-                          className={`flex items-center justify-center p-6 bg-slate-50 border-2 rounded-lg cursor-pointer transition-all hover:bg-slate-100 hover:border-slate-300 ${
-                            participantType === "other"
-                              ? "border-blue-600 bg-blue-50 ring-2 ring-blue-200"
-                              : "border-slate-200"
-                          }`}
-                        >
-                          <div className="text-center">
-                            <div
-                              className={`font-semibold text-lg ${participantType === "other" ? "text-blue-700" : "text-slate-800"}`}
-                            >
-                              Pour quelqu&apos;un d&apos;autre
-                            </div>
-                            <div
-                              className={`text-sm mt-1 ${participantType === "other" ? "text-blue-600" : "text-slate-600"}`}
-                            >
-                              Cadeau ou réservation tierce
-                            </div>
-                          </div>
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-
-                  {/* Informations participant */}
-                  <div className="space-y-6">
-                    <h3 className="text-lg font-semibold text-slate-800">
-                      Informations{" "}
-                      {participantType === "self"
-                        ? "personnelles"
-                        : "du participant"}
-                    </h3>
-
-                    {/* Identité */}
-                    <div className="space-y-4">
-                      <h4 className="font-medium text-slate-700 border-l-4 border-blue-600 pl-3">
-                        Identité
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="firstName">Prénom *</Label>
-                          <Input
-                            id="firstName"
-                            {...register("firstName", {
-                              required: "Prénom requis",
-                            })}
-                            placeholder={
-                              participantType === "self"
-                                ? "Votre prénom"
-                                : "Prénom du participant"
-                            }
-                            className="mt-1"
-                          />
-                          {errors.firstName && (
-                            <p className="text-red-500 text-sm mt-1">
-                              {errors.firstName.message}
-                            </p>
-                          )}
-                        </div>
-
-                        <div>
-                          <Label htmlFor="lastName">Nom *</Label>
-                          <Input
-                            id="lastName"
-                            {...register("lastName", {
-                              required: "Nom requis",
-                            })}
-                            placeholder={
-                              participantType === "self"
-                                ? "Votre nom"
-                                : "Nom du participant"
-                            }
-                            className="mt-1"
-                          />
-                          {errors.lastName && (
-                            <p className="text-red-500 text-sm mt-1">
-                              {errors.lastName.message}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
+                    <h4 className="font-medium text-slate-700 border-l-4 border-blue-600 pl-3 text-sm">Identité</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="birthDate">Date de naissance *</Label>
-                        <Input
-                          id="birthDate"
-                          type="date"
-                          {...register("birthDate", {
-                            required: "Date de naissance requise",
-                          })}
-                          className="mt-1"
-                        />
-                        {errors.birthDate && (
-                          <p className="text-red-500 text-sm mt-1">
-                            {errors.birthDate.message}
-                          </p>
-                        )}
+                        <Label htmlFor="firstName">Prénom *</Label>
+                        <Input id="firstName" {...register("firstName", { required: "Prénom requis" })}
+                          placeholder={participantType === "self" ? "Votre prénom" : "Prénom du participant"} className="mt-1" />
+                        {errors.firstName && <p className="text-red-500 text-sm mt-1">{errors.firstName.message}</p>}
+                      </div>
+                      <div>
+                        <Label htmlFor="lastName">Nom *</Label>
+                        <Input id="lastName" {...register("lastName", { required: "Nom requis" })}
+                          placeholder={participantType === "self" ? "Votre nom" : "Nom du participant"} className="mt-1" />
+                        {errors.lastName && <p className="text-red-500 text-sm mt-1">{errors.lastName.message}</p>}
                       </div>
                     </div>
-
-                    {/* Contact */}
-                    <div className="space-y-4">
-                      <h4 className="font-medium text-slate-700 border-l-4 border-blue-600 pl-3">
-                        Contact
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="email">Email *</Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            {...register("email", { required: "Email requis" })}
-                            placeholder="email@exemple.com"
-                            className="mt-1"
-                          />
-                          {errors.email && (
-                            <p className="text-red-500 text-sm mt-1">
-                              {errors.email.message}
-                            </p>
-                          )}
-                        </div>
-
-                        <div>
-                          <Label htmlFor="phone">Téléphone *</Label>
-                          <Input
-                            id="phone"
-                            {...register("phone", {
-                              required: "Téléphone requis",
-                            })}
-                            placeholder="06 12 34 56 78"
-                            className="mt-1"
-                          />
-                          {errors.phone && (
-                            <p className="text-red-500 text-sm mt-1">
-                              {errors.phone.message}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Informations physiques */}
-                    <div className="space-y-4">
-                      <h4 className="font-medium text-slate-700 border-l-4 border-blue-600 pl-3">
-                        Informations physiques
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="weight">Poids (kg) *</Label>
-                          <Input
-                            id="weight"
-                            type="number"
-                            {...register("weight", {
-                              required: "Poids requis",
-                              min: { value: 20, message: "Poids minimum 20kg" },
-                              max: {
-                                value: 120,
-                                message: "Poids maximum 120kg",
-                              },
-                            })}
-                            placeholder="70"
-                            className="mt-1"
-                          />
-                          {errors.weight && (
-                            <p className="text-red-500 text-sm mt-1">
-                              {errors.weight.message}
-                            </p>
-                          )}
-                        </div>
-
-                        <div>
-                          <Label htmlFor="height">Taille (cm) *</Label>
-                          <Input
-                            id="height"
-                            type="number"
-                            {...register("height", {
-                              required: "Taille requise",
-                              min: {
-                                value: 120,
-                                message: "Taille minimum 120cm",
-                              },
-                              max: {
-                                value: 220,
-                                message: "Taille maximum 220cm",
-                              },
-                            })}
-                            placeholder="175"
-                            className="mt-1"
-                          />
-                          {errors.height && (
-                            <p className="text-red-500 text-sm mt-1">
-                              {errors.height.message}
-                            </p>
-                          )}
-                        </div>
-                      </div>
+                    <div>
+                      <Label htmlFor="birthDate">Date de naissance *</Label>
+                      <Input id="birthDate" type="date" {...register("birthDate", { required: "Requise" })} className="mt-1" />
+                      {errors.birthDate && <p className="text-red-500 text-sm mt-1">{errors.birthDate.message}</p>}
                     </div>
                   </div>
-
-                  {/* Section Bon Cadeau */}
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-slate-800">
-                      Vous avez un bon cadeau ?
-                    </h3>
-
-                    <Card className="border-2 border-cyan-200 bg-cyan-50">
-                      <CardContent className="p-6 space-y-4">
-                        <div className="flex items-start gap-3">
-                          <Gift className="w-6 h-6 text-cyan-600 mt-1 flex-shrink-0" />
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-cyan-900 mb-2">
-                              Utilisez votre bon cadeau
-                            </h4>
-                            <p className="text-sm text-cyan-800 mb-4">
-                              Si vous avez reçu un bon cadeau pour ce type de
-                              stage, entrez le code ci-dessous pour bénéficier
-                              de votre place gratuite.
-                            </p>
-
-                            {!voucherValidated ? (
-                              <div className="space-y-3">
-                                <div className="flex gap-2">
-                                  <Input
-                                    value={giftVoucherCode}
-                                    onChange={(e) => {
-                                      setGiftVoucherCode(
-                                        e.target.value.toUpperCase(),
-                                      );
-                                      setVoucherError("");
-                                    }}
-                                    placeholder="GVSCP-XXXXXXXX-XXXX"
-                                    className={`flex-1 ${voucherError ? "border-red-500" : ""}`}
-                                    disabled={isValidatingVoucher}
-                                  />
-                                  <Button
-                                    type="button"
-                                    onClick={validateGiftVoucher}
-                                    disabled={
-                                      isValidatingVoucher ||
-                                      !giftVoucherCode.trim()
-                                    }
-                                    className="bg-cyan-600 hover:bg-cyan-700"
-                                  >
-                                    {isValidatingVoucher ? (
-                                      <>
-                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                        Validation...
-                                      </>
-                                    ) : (
-                                      "Valider"
-                                    )}
-                                  </Button>
-                                </div>
-                                {voucherError && (
-                                  <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                                    <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                                    <p className="text-sm text-red-800">
-                                      {voucherError}
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                                <div className="flex-1">
-                                  <p className="text-sm font-semibold text-green-800">
-                                    Bon cadeau validé !
-                                  </p>
-                                  <p className="text-xs text-green-700 mt-1">
-                                    Code : {giftVoucherCode}
-                                  </p>
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={removeVoucher}
-                                  className="text-green-700 hover:text-green-900"
-                                >
-                                  Retirer
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  {/* Récapitulatif prix */}
-                  <div className="p-6 bg-slate-50 rounded-lg border border-slate-200">
-                    <h3 className="text-lg font-semibold text-slate-800 mb-4">
-                      Récapitulatif de votre commande
-                    </h3>
-
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium text-slate-700">
-                          {getCategoryLabel(selectedCategory)}
-                        </span>
-                        <span className="font-semibold text-slate-800">
-                          {selectedSlot.price}€
-                        </span>
+                    <h4 className="font-medium text-slate-700 border-l-4 border-blue-600 pl-3 text-sm">Contact</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="email">Email *</Label>
+                        <Input id="email" type="email" {...register("email", { required: "Email requis" })}
+                          placeholder="email@exemple.com" className="mt-1" />
+                        {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
                       </div>
-                      <hr className="border-slate-300" />
-                      {voucherValidated && (
-                        <div className="flex justify-between items-center text-green-600">
-                          <span className="font-medium text-slate-700">
-                            Bon cadeau appliqué
-                          </span>
-                          <span className="font-semibold">
-                            -{selectedSlot.price}€
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex justify-between items-center">
-                        <span className="font-bold text-xl text-slate-800">
-                          Total
-                        </span>
-                        {voucherValidated ? (
-                          <div className="text-right">
-                            <span className="font-bold text-xl text-gray-400 line-through block">
-                              {selectedSlot.price}€
-                            </span>
-                            <span className="font-bold text-2xl text-green-600">
-                              0€
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="font-bold text-2xl text-blue-600">
-                            {selectedSlot.price}€
-                          </span>
-                        )}
+                      <div>
+                        <Label htmlFor="phone">Téléphone *</Label>
+                        <Input id="phone" {...register("phone", { required: "Requis" })}
+                          placeholder="06 12 34 56 78" className="mt-1" />
+                        {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>}
                       </div>
                     </div>
                   </div>
-
-                  {/* Boutons */}
-                  <div className="flex gap-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedSlot(null);
-                        setShowForm(false);
-                      }}
-                      className="flex-1 h-12"
-                      size="lg"
-                    >
-                      Modifier le créneau
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={isLoading}
-                      className="flex-1 h-12"
-                      size="lg"
-                    >
-                      {isLoading ? (
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-4 h-4 animate-spin" />
-                          Ajout en cours...
-                        </div>
-                      ) : (
-                        "Ajouter au panier"
-                      )}
-                    </Button>
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-slate-700 border-l-4 border-blue-600 pl-3 text-sm">Informations physiques</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="weight">Poids (kg) *</Label>
+                        <Input id="weight" type="number"
+                          {...register("weight", { required: "Requis", min: { value: 20, message: "Min 20kg" }, max: { value: 120, message: "Max 120kg" } })}
+                          placeholder="70" className="mt-1" />
+                        {errors.weight && <p className="text-red-500 text-sm mt-1">{errors.weight.message}</p>}
+                      </div>
+                      <div>
+                        <Label htmlFor="height">Taille (cm) *</Label>
+                        <Input id="height" type="number"
+                          {...register("height", { required: "Requise", min: { value: 120, message: "Min 120cm" }, max: { value: 220, message: "Max 220cm" } })}
+                          placeholder="175" className="mt-1" />
+                        {errors.height && <p className="text-red-500 text-sm mt-1">{errors.height.message}</p>}
+                      </div>
+                    </div>
                   </div>
-                </form>
-              </div>
+                </div>
+
+                {/* Récapitulatif */}
+                <div className="p-4 sm:p-6 bg-slate-50 rounded-xl border border-slate-200">
+                  <h3 className="text-base font-semibold text-slate-800 mb-4">Récapitulatif</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-slate-700">{getCategoryLabel(effectiveCategory)}</span>
+                      <div className="text-right">
+                        {selectedSlot.promotionOriginalPrice && selectedSlot.price < selectedSlot.promotionOriginalPrice && (
+                          <span className="text-sm text-slate-400 line-through block">{selectedSlot.promotionOriginalPrice}€</span>
+                        )}
+                        <span className="font-semibold text-slate-800">{selectedSlot.price}€</span>
+                      </div>
+                    </div>
+                    <hr className="border-slate-300" />
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-lg text-slate-800">Total</span>
+                      <span className="font-bold text-2xl text-blue-600">{selectedSlot.price}€</span>
+                    </div>
+                    {selectedSlot.acomptePrice && (
+                      <>
+                        <hr className="border-dashed border-slate-200" />
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-slate-600">Acompte à régler aujourd&apos;hui</span>
+                          <span className="font-semibold text-slate-800">{selectedSlot.acomptePrice}€</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-slate-500">Solde à régler sur place</span>
+                          <span className="text-slate-600">{selectedSlot.price - selectedSlot.acomptePrice}€</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button type="button" variant="outline"
+                    onClick={() => { setSelectedSlot(null); setShowForm(false); }}
+                    className="flex-1 h-12" size="lg">
+                    Modifier le créneau
+                  </Button>
+                  <Button type="submit" disabled={isLoading} className="flex-1 h-12" size="lg">
+                    {isLoading ? (
+                      <div className="flex items-center gap-2"><Clock className="w-4 h-4 animate-spin" /> Ajout en cours…</div>
+                    ) : (
+                      <div className="flex items-center gap-2"><ShoppingCart className="w-4 h-4" /> Ajouter au panier</div>
+                    )}
+                  </Button>
+                </div>
+              </form>
             </div>
           </>
         )}
       </div>
 
-      {/* Dialog de confirmation après ajout au panier */}
-      <Dialog
-        open={showSuccessDialog}
-        onOpenChange={(open) => {
-          setShowSuccessDialog(open);
-          // Si la popup est fermée sans action, rediriger vers /reserver
-          if (!open) {
-            router.push("/reserver");
-          }
-        }}
-      >
+      {/* Dialog: place bloquée */}
+      <Dialog open={showSuccessDialog} onOpenChange={(open) => { setShowSuccessDialog(open); if (!open) router.push("/reserver"); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <div className="flex justify-center mb-4">
@@ -1531,232 +1445,52 @@ function StageReservationPageContent() {
                 <Clock className="w-8 h-8 text-orange-600" />
               </div>
             </div>
-            <DialogTitle className="text-center text-2xl">
-              Place temporairement bloquée.
-            </DialogTitle>
+            <DialogTitle className="text-center text-2xl">Place temporairement bloquée.</DialogTitle>
             <DialogDescription className="text-center text-base space-y-2">
-              <p className="font-semibold text-slate-800">
-                Votre place est bloquée pendant 1h00
-              </p>
-              <p className="text-sm">
-                Cette place est temporairement réservée pour vous. Finalisez
-                votre paiement dans l&apos;heure pour confirmer votre réservation.
-              </p>
+              <p className="font-semibold text-slate-800">Votre place est bloquée pendant 1h00</p>
+              <p className="text-sm">Finalisez votre paiement dans l&apos;heure pour confirmer votre réservation.</p>
               <div className="flex items-center justify-center gap-2 text-orange-600 bg-orange-50 p-2 rounded-lg mt-3">
                 <Clock className="w-4 h-4" />
                 {(() => {
-                  function Countdown({
-                    initialSeconds,
-                    start,
-                  }: {
-                    initialSeconds: number;
-                    start: boolean;
-                  }) {
-                    const [secondsLeft, setSecondsLeft] =
-                      useState(initialSeconds);
-
-                    // Reset when dialog re-opens
+                  function Countdown({ initialSeconds, start }: { initialSeconds: number; start: boolean }) {
+                    const [s, setS] = useState(initialSeconds);
                     useEffect(() => {
                       if (!start) return;
-                      setSecondsLeft(initialSeconds);
-                      const id = setInterval(() => {
-                        setSecondsLeft((prev) => {
-                          if (prev <= 1) {
-                            clearInterval(id);
-                            return 0;
-                          }
-                          return prev - 1;
-                        });
-                      }, 1000);
+                      setS(initialSeconds);
+                      const id = setInterval(() => setS((p) => (p <= 1 ? (clearInterval(id), 0) : p - 1)), 1000);
                       return () => clearInterval(id);
                     }, [start, initialSeconds]);
-
-                    const minutes = Math.floor(secondsLeft / 60)
-                      .toString()
-                      .padStart(2, "0");
-                    const seconds = (secondsLeft % 60)
-                      .toString()
-                      .padStart(2, "0");
-
                     return (
                       <span className="text-sm font-medium">
-                        Temps restant : {minutes}:{seconds}
+                        Temps restant : {Math.floor(s / 60).toString().padStart(2, "0")}:{(s % 60).toString().padStart(2, "0")}
                       </span>
                     );
                   }
-
-                  return (
-                    <Countdown
-                      initialSeconds={60 * 60}
-                      start={showSuccessDialog}
-                    />
-                  );
+                  return <Countdown initialSeconds={3600} start={showSuccessDialog} />;
                 })()}
               </div>
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex-col sm:flex-col gap-2 mt-4">
-            <Button
-              onClick={() => {
-                setShowSuccessDialog(false);
-                router.push("/reserver");
-              }}
-              className="w-full gap-2"
-              size="lg"
-            >
-              <Plus className="w-4 h-4" />
-              Je continue mes achats
+          <div className="flex flex-col gap-2 mt-4">
+            <Button onClick={() => { setShowSuccessDialog(false); router.push("/reserver"); }} className="w-full gap-2" size="lg">
+              <ArrowLeft className="w-4 h-4" /> Je continue mes achats
             </Button>
-            <Button
-              onClick={() => {
-                setShowSuccessDialog(false);
-                router.push("/checkout");
-              }}
-              variant="outline"
-              className="w-full gap-2"
-              size="lg"
-            >
-              <ShoppingCart className="w-4 h-4" />
-              Voir mon panier
+            <Button onClick={() => { setShowSuccessDialog(false); router.push("/checkout"); }} variant="outline" className="w-full gap-2" size="lg">
+              <ShoppingCart className="w-4 h-4" /> Voir mon panier
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de succès validation bon cadeau */}
-      <Dialog
-        open={showVoucherSuccessDialog}
-        onOpenChange={setShowVoucherSuccessDialog}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center">
-                <Gift className="w-8 h-8 text-cyan-600" />
-              </div>
-            </div>
-            <DialogTitle className="text-center text-2xl">
-              Bon cadeau validé !
-            </DialogTitle>
-            <DialogDescription className="text-center text-base">
-              Votre bon cadeau a été validé avec succès.
-              <br />
-              Votre réservation sera gratuite !
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-4">
-            <Button
-              onClick={() => setShowVoucherSuccessDialog(false)}
-              className="w-full bg-cyan-600 hover:bg-cyan-700"
-              size="lg"
-            >
-              Continuer ma réservation
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
 
-// Composant pour afficher un créneau
-function SlotCard({ slot, onSelect }: { slot: Stage; onSelect: () => void }) {
-  const { availability, loading } = useAvailability("stage", slot.id);
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const formatted = date.toLocaleDateString("fr-FR", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
-  };
-
-  const getEndDate = (startDate: string, duration: number) => {
-    const start = new Date(startDate);
-    const end = new Date(start);
-    end.setDate(start.getDate() + duration - 1);
-    return formatDate(end.toISOString());
-  };
-
-  const isOnSale = slot.promotionOriginalPrice && slot.price < slot.promotionOriginalPrice;
-
-  const isAvailable = availability?.available ?? true;
-  const availablePlaces = availability?.availablePlaces ?? slot.places;
-
-  return (
-    <Card
-      className={`cursor-pointer transition-all hover:shadow-md ${!isAvailable ? "opacity-50" : ""}`}
-    >
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 space-y-3">
-            {/* Dates */}
-            <div>
-              <h3 className="font-semibold text-lg text-slate-800">
-                Du {formatDate(slot.startDate)}
-              </h3>
-              <p className="text-sm text-slate-600">
-                au {getEndDate(slot.startDate, slot.duration)} ({slot.duration}{" "}
-                jours)
-              </p>
-            </div>
-
-            {/* Places disponibles */}
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-slate-500" />
-              {loading ? (
-                <span className="text-sm text-slate-500">Vérification...</span>
-              ) : (
-                <Badge variant={isAvailable ? "default" : "destructive"}>
-                  {isAvailable
-                    ? `${availablePlaces} place${availablePlaces > 1 ? "s" : ""} disponible${availablePlaces > 1 ? "s" : ""}`
-                    : "Complet"}
-                </Badge>
-              )}
-            </div>
-
-            {/* Bouton */}
-            <Button
-              onClick={onSelect}
-              disabled={!isAvailable}
-              size="sm"
-              className="gap-1"
-            >
-              Choisir ce créneau
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
-
-          {/* Prix */}
-          <div className="text-right">
-            {isOnSale && (
-              <div className="mb-1">
-                <Badge variant="destructive" className="text-xs">
-                  PROMO
-                </Badge>
-              </div>
-            )}
-            <div className="space-y-1">
-              {isOnSale && (
-                <p className="text-sm text-slate-500 line-through">
-                  {slot.promotionOriginalPrice}€
-                </p>
-              )}
-              <p className="font-bold text-2xl text-blue-600">{slot.price}€</p>
-              <p className="text-xs text-slate-500">par participant</p>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+// ─── Export ───────────────────────────────────────────────────────────────────
 
 export default function StageReservationClientPage() {
   return (
-    <Suspense fallback={<div>Chargement...</div>}>
+    <Suspense fallback={<div>Chargement…</div>}>
       <StageReservationPageContent />
     </Suspense>
   );

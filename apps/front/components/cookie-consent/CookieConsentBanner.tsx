@@ -4,35 +4,45 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 
+const CONSENT_KEY = "cookie_consent";
+
+function applyConsent(value: "granted" | "denied") {
+  if (typeof window !== "undefined" && (window as any).gtag) {
+    (window as any).gtag("consent", "update", {
+      ad_storage: value,
+      ad_user_data: value,
+      ad_personalization: value,
+      analytics_storage: value,
+    });
+  }
+}
+
 export default function CookieConsentBanner() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Afficher le banner à chaque visite après un court délai
+    const stored = localStorage.getItem(CONSENT_KEY);
+    if (stored === "granted") {
+      applyConsent("granted");
+      return;
+    }
+    if (stored === "declined") {
+      // Default is already denied — nothing to do
+      return;
+    }
+    // No choice yet → show banner after short delay
     const timer = setTimeout(() => setIsVisible(true), 500);
     return () => clearTimeout(timer);
   }, []);
 
   const handleAccept = () => {
-    // Update Google Consent Mode
-    if (typeof window !== "undefined" && (window as any).gtag) {
-      (window as any).gtag("consent", "update", {
-        ad_storage: "granted",
-        ad_user_data: "granted",
-        ad_personalization: "granted",
-        analytics_storage: "granted",
-      });
-    }
-
-    // Masquer le banner (sera ré-affiché à la prochaine visite)
+    localStorage.setItem(CONSENT_KEY, "granted");
+    applyConsent("granted");
     setIsVisible(false);
   };
 
   const handleDecline = () => {
-    // Default is denied, so no need to update gtag unless we want to be explicit
-    // But usually 'denied' is the default state we set in layout.tsx
-
-    // Masquer le banner (sera ré-affiché à la prochaine visite)
+    localStorage.setItem(CONSENT_KEY, "declined");
     setIsVisible(false);
   };
 

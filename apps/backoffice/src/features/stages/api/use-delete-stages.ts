@@ -15,10 +15,11 @@ export const useDeleteStage = () => {
       const response = await client.api.stages[":id"]["$delete"]({ param: { id } });
       return await response.json();
     },
-    onSuccess: (response) => {
+    onSuccess: (response, { id }) => {
       if (response.success) {
         toast.success(response.message);
         queryClient.invalidateQueries({ queryKey: ["stages"] });
+        queryClient.invalidateQueries({ queryKey: ["stage", id] });
         router.refresh();
       } else {
         toast.error(response.message);

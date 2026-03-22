@@ -23,10 +23,11 @@ export const useApplyStagePromotion = () => {
       });
       return await response.json();
     },
-    onSuccess: (response) => {
+    onSuccess: (response, { param }) => {
       if (response.success) {
         toast.success(response.message);
         queryClient.invalidateQueries({ queryKey: ["stages"] });
+        queryClient.invalidateQueries({ queryKey: ["stage", param.id] });
         router.refresh();
       } else {
         toast.error(response.message);

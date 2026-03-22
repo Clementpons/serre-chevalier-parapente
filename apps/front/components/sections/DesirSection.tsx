@@ -106,10 +106,7 @@ export default function DesirSection() {
         <Dialog>
           <DialogTrigger asChild>
             <button
-              className="flex w-full rounded-lg overflow-hidden h-[40vh] lg:w-[40%] box-border relative cursor-pointer"
-              aria-haspopup="dialog"
-              aria-expanded={false}
-              aria-controls="radix-:R1gsv9tkq:">
+              className="flex w-full rounded-lg overflow-hidden h-[40vh] lg:w-[40%] box-border relative cursor-pointer">
               <Image
                 src="/placeholder/bento_materiel.webp"
                 width={1080}

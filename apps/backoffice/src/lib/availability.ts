@@ -106,6 +106,99 @@ export class AvailabilityService {
   }
 
   /**
+   * Vérifier les disponibilités pour plusieurs créneaux en une seule passe (4 requêtes DB)
+   */
+  static async checkAvailabilityBatch(
+    items: { type: 'stage' | 'bapteme'; itemId: string }[]
+  ): Promise<Record<string, { available: boolean; availablePlaces: number; totalPlaces: number; confirmedBookings: number; temporaryReservations: number; reason: string | null }>> {
+    if (items.length === 0) return {};
+
+    const now = new Date();
+    const stageIds = items.filter(i => i.type === 'stage').map(i => i.itemId);
+    const baptemeIds = items.filter(i => i.type === 'bapteme').map(i => i.itemId);
+
+    // Nettoyer les items expirés en une seule requête
+    await prisma.cartItem.deleteMany({
+      where: {
+        expiresAt: { lte: now },
+        isExpired: false,
+        OR: [
+          ...(stageIds.length > 0 ? [{ type: 'STAGE' as const, stageId: { in: stageIds } }] : []),
+          ...(baptemeIds.length > 0 ? [{ type: 'BAPTEME' as const, baptemeId: { in: baptemeIds } }] : []),
+        ],
+      },
+    });
+
+    // 4 requêtes DB en parallèle
+    const [stages, baptemes, stageTempCounts, baptemeTempCounts] = await Promise.all([
+      stageIds.length > 0
+        ? prisma.stage.findMany({
+            where: { id: { in: stageIds } },
+            select: { id: true, places: true, _count: { select: { bookings: true } } },
+          })
+        : [],
+      baptemeIds.length > 0
+        ? prisma.bapteme.findMany({
+            where: { id: { in: baptemeIds } },
+            select: { id: true, places: true, _count: { select: { bookings: true } } },
+          })
+        : [],
+      stageIds.length > 0
+        ? prisma.cartItem.groupBy({
+            by: ['stageId'],
+            where: { type: 'STAGE', stageId: { in: stageIds }, expiresAt: { gt: now }, isExpired: false },
+            _count: { id: true },
+          })
+        : [],
+      baptemeIds.length > 0
+        ? prisma.cartItem.groupBy({
+            by: ['baptemeId'],
+            where: { type: 'BAPTEME', baptemeId: { in: baptemeIds }, expiresAt: { gt: now }, isExpired: false },
+            _count: { id: true },
+          })
+        : [],
+    ]);
+
+    const result: Record<string, { available: boolean; availablePlaces: number; totalPlaces: number; confirmedBookings: number; temporaryReservations: number; reason: string | null }> = {};
+
+    const stageTempMap = new Map(
+      stageTempCounts.filter(s => s.stageId !== null).map(s => [s.stageId!, s._count.id])
+    );
+    for (const stage of stages as { id: string; places: number; _count: { bookings: number } }[]) {
+      const confirmedBookings = stage._count.bookings;
+      const temporaryReservations = stageTempMap.get(stage.id) || 0;
+      const availablePlaces = stage.places - confirmedBookings - temporaryReservations;
+      result[stage.id] = {
+        available: availablePlaces >= 1,
+        availablePlaces: Math.max(0, availablePlaces),
+        totalPlaces: stage.places,
+        confirmedBookings,
+        temporaryReservations,
+        reason: availablePlaces < 1 ? 'Places insuffisantes' : null,
+      };
+    }
+
+    const baptemeTempMap = new Map(
+      baptemeTempCounts.filter(b => b.baptemeId !== null).map(b => [b.baptemeId!, b._count.id])
+    );
+    for (const bapteme of baptemes as { id: string; places: number; _count: { bookings: number } }[]) {
+      const confirmedBookings = bapteme._count.bookings;
+      const temporaryReservations = baptemeTempMap.get(bapteme.id) || 0;
+      const availablePlaces = bapteme.places - confirmedBookings - temporaryReservations;
+      result[bapteme.id] = {
+        available: availablePlaces >= 1,
+        availablePlaces: Math.max(0, availablePlaces),
+        totalPlaces: bapteme.places,
+        confirmedBookings,
+        temporaryReservations,
+        reason: availablePlaces < 1 ? 'Places insuffisantes' : null,
+      };
+    }
+
+    return result;
+  }
+
+  /**
    * Créer une réservation temporaire
    */
   static async createTemporaryReservation(

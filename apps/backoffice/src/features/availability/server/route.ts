@@ -10,6 +10,13 @@ const CheckAvailabilitySchema = z.object({
   quantity: z.number().default(1),
 });
 
+const CheckAvailabilityBatchSchema = z.object({
+  items: z
+    .array(z.object({ type: z.enum(['stage', 'bapteme']), itemId: z.string() }))
+    .min(1)
+    .max(50),
+});
+
 const ReserveTemporarySchema = z.object({
   sessionId: z.string(),
   type: z.enum(['stage', 'bapteme']),
@@ -40,6 +47,27 @@ const app = new Hono()
 
       } catch (error) {
         console.error('Erreur vérification disponibilités:', error);
+        return c.json({
+          success: false,
+          message: 'Erreur lors de la vérification des disponibilités',
+          data: null,
+        });
+      }
+    }
+  )
+
+  // Check availability for multiple items in one request
+  .post(
+    "check-batch",
+    requireApiKey,
+    zValidator("json", CheckAvailabilityBatchSchema),
+    async (c) => {
+      try {
+        const { items } = c.req.valid("json");
+        const data = await AvailabilityService.checkAvailabilityBatch(items);
+        return c.json({ success: true, data });
+      } catch (error) {
+        console.error('Erreur vérification disponibilités batch:', error);
         return c.json({
           success: false,
           message: 'Erreur lors de la vérification des disponibilités',

@@ -16,9 +16,28 @@ const app = new Hono()
   .get("/", requireSessionOrApiKey, async (c) => {
     const moniteurId = c.req.query("moniteurId");
     const date = c.req.query("date");
+    const from = c.req.query("from");
+    const to = c.req.query("to");
+    const categories = c.req.query("categories");
     const where: any = {};
     if (moniteurId) where.moniteurId = moniteurId;
-    if (date) where.date = new Date(date);
+
+    if (date) {
+      where.date = new Date(date);
+    } else if (from || to) {
+      const gte = from ? new Date(from) : undefined;
+      let lte: Date | undefined;
+      if (to) {
+        lte = new Date(to);
+        lte.setHours(23, 59, 59, 999);
+      }
+      where.date = { ...(gte ? { gte } : {}), ...(lte ? { lte } : {}) };
+    }
+
+    if (categories) {
+      const catList = categories.split(",").map((c) => c.trim()).filter(Boolean);
+      if (catList.length > 0) where.categories = { hasSome: catList };
+    }
 
     try {
       const now = new Date();

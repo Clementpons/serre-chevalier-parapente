@@ -17,9 +17,31 @@ const app = new Hono()
   .get("/", requireApiKey, async (c) => {
     const moniteurId = c.req.query("moniteurId");
     const date = c.req.query("date");
-    const where: any = {};
+    const from = c.req.query("from");
+    const to = c.req.query("to");
+    const types = c.req.query("types");
+
+    const where: Prisma.StageWhereInput = {};
     if (moniteurId) where.moniteurId = moniteurId;
-    if (date) where.startDate = new Date(date);
+
+    // Single-date filter (legacy) vs date-range filter
+    if (date) {
+      where.startDate = new Date(date);
+    } else if (from || to) {
+      // Buffer of 31 days before `from` so long stages (e.g. AUTONOMIE 14j)
+      // that start before the month but overlap it are still included.
+      const gte = from
+        ? new Date(new Date(from).getTime() - 31 * 24 * 60 * 60 * 1000)
+        : undefined;
+      const lte = to ? new Date(to) : undefined;
+      where.startDate = { ...(gte ? { gte } : {}), ...(lte ? { lte } : {}) };
+    }
+
+    // Type filter (comma-separated: "INITIATION,PROGRESSION,DOUBLE")
+    if (types) {
+      const typeList = types.split(",").map((t) => t.trim()).filter(Boolean);
+      if (typeList.length > 0) where.type = { in: typeList };
+    }
 
     try {
       const now = new Date();

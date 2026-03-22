@@ -37,6 +37,7 @@ import { EditableParticipantDetails } from "@/components/checkout/EditablePartic
 import { VideoToggle } from "@/components/checkout/VideoToggle";
 import { GiftVoucherDetails } from "@/components/checkout/GiftVoucherDetails";
 import { useBaptemePrices } from "@/hooks/useBaptemePrices";
+import ResponsiveModal from "@/components/responsive-modal";
 
 interface CartItem {
   id: string;
@@ -76,7 +77,7 @@ function ReservationTimer({
   useEffect(() => {
     const tempItems = cartItems.filter(
       (item) =>
-        (item.type === "STAGE" || item.type === "BAPTEME") && item.expiresAt
+        (item.type === "STAGE" || item.type === "BAPTEME") && item.expiresAt,
     );
 
     if (tempItems.length === 0) return;
@@ -185,7 +186,11 @@ function LoadingOverlay({
 }
 
 export default function CheckoutPage() {
-  const { getPrice, videoOptionPrice, loading: pricesLoading } = useBaptemePrices();
+  const {
+    getPrice,
+    videoOptionPrice,
+    loading: pricesLoading,
+  } = useBaptemePrices();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [, setTotalAmount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -231,7 +236,10 @@ export default function CheckoutPage() {
               ? getItemPrice(item)
               : (item.giftVoucherAmount ?? 0),
       }));
-      const cartTotal = cartItemsBreakdown.reduce((sum, i) => sum + i.amount, 0);
+      const cartTotal = cartItemsBreakdown.reduce(
+        (sum, i) => sum + i.amount,
+        0,
+      );
       const cartSubtotal = cartItems.reduce((sum, item) => {
         if (item.type === "STAGE") return sum + (item.stage?.price ?? 0);
         return sum + getItemPrice(item);
@@ -245,12 +253,21 @@ export default function CheckoutPage() {
               "Content-Type": "application/json",
               "x-api-key": process.env.NEXT_PUBLIC_API_KEY || "",
             },
-            body: JSON.stringify({ code: appliedPromo.code, cartTotal, cartSubtotal, cartItems: cartItemsBreakdown }),
-          }
+            body: JSON.stringify({
+              code: appliedPromo.code,
+              cartTotal,
+              cartSubtotal,
+              cartItems: cartItemsBreakdown,
+            }),
+          },
         );
         const result = await res.json();
         if (result.success) {
-          setAppliedPromo((prev) => prev ? { ...prev, discountAmount: result.data.discountAmount } : null);
+          setAppliedPromo((prev) =>
+            prev
+              ? { ...prev, discountAmount: result.data.discountAmount }
+              : null,
+          );
         } else {
           setAppliedPromo(null);
         }
@@ -259,7 +276,7 @@ export default function CheckoutPage() {
       }
     };
     revalidate();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartItems, appliedPromo?.code]);
 
   const loadCartItems = async (silent = false) => {
@@ -278,7 +295,7 @@ export default function CheckoutPage() {
             "x-session-id": sessionId,
             "x-api-key": process.env.NEXT_PUBLIC_API_KEY || "",
           },
-        }
+        },
       );
 
       const data = await response.json();
@@ -332,7 +349,7 @@ export default function CheckoutPage() {
             "x-session-id": sessionId,
             "x-api-key": process.env.NEXT_PUBLIC_API_KEY || "",
           },
-        }
+        },
       );
 
       const data = await response.json();
@@ -365,11 +382,11 @@ export default function CheckoutPage() {
         const stageType =
           item.participantData?.selectedStageType || item.stage?.type;
         return `Stage ${stageType} - ${new Date(
-          item.stage?.startDate
+          item.stage?.startDate,
         ).toLocaleDateString("fr-FR")}`;
       case "BAPTEME":
         return `Baptême ${item.participantData.selectedCategory} - ${new Date(
-          item.bapteme?.date
+          item.bapteme?.date,
         ).toLocaleDateString("fr-FR")}`;
       case "GIFT_VOUCHER":
         const voucherType =
@@ -478,7 +495,10 @@ export default function CheckoutPage() {
           return;
         }
         const deposit = getBaptemeDeposit(item.bapteme, item.participantData);
-        const remaining = getBaptemeRemaining(item.bapteme, item.participantData);
+        const remaining = getBaptemeRemaining(
+          item.bapteme,
+          item.participantData,
+        );
         const itemTotal = getItemPrice(item);
         depositTotal += deposit;
         remainingTotal += remaining;
@@ -561,7 +581,11 @@ export default function CheckoutPage() {
   const applyPromoCode = async () => {
     if (!promoCodeInput.trim()) return;
     if (calculateTotals().depositTotal === 0) {
-      toast({ title: "Code promo non applicable", description: "Votre panier est déjà gratuit.", variant: "destructive" });
+      toast({
+        title: "Code promo non applicable",
+        description: "Votre panier est déjà gratuit.",
+        variant: "destructive",
+      });
       return;
     }
     setIsApplyingPromo(true);
@@ -578,7 +602,10 @@ export default function CheckoutPage() {
               ? getItemPrice(item)
               : (item.giftVoucherAmount ?? 0),
       }));
-      const cartTotal = cartItemsBreakdown.reduce((sum, i) => sum + i.amount, 0);
+      const cartTotal = cartItemsBreakdown.reduce(
+        (sum, i) => sum + i.amount,
+        0,
+      );
       // cartSubtotal = prix pleins pour la vérification du minCartAmount
       const cartSubtotal = cartItems.reduce((sum, item) => {
         if (item.type === "STAGE") return sum + (item.stage?.price ?? 0);
@@ -599,7 +626,7 @@ export default function CheckoutPage() {
             cartSubtotal,
             cartItems: cartItemsBreakdown,
           }),
-        }
+        },
       );
       const result = await res.json();
       if (result.success) {
@@ -608,14 +635,26 @@ export default function CheckoutPage() {
           code: result.data.promoCode.code,
           label: result.data.promoCode.label ?? result.data.promoCode.code,
           discountAmount: result.data.discountAmount,
-          applicableProductTypes: result.data.promoCode.applicableProductTypes ?? [],
+          applicableProductTypes:
+            result.data.promoCode.applicableProductTypes ?? [],
         });
-        toast({ title: "Code promo appliqué !", description: `Réduction de ${result.data.discountAmount.toFixed(2)}€` });
+        toast({
+          title: "Code promo appliqué !",
+          description: `Réduction de ${result.data.discountAmount.toFixed(2)}€`,
+        });
       } else {
-        toast({ title: "Code invalide", description: result.message, variant: "destructive" });
+        toast({
+          title: "Code invalide",
+          description: result.message,
+          variant: "destructive",
+        });
       }
     } catch {
-      toast({ title: "Erreur", description: "Impossible de vérifier le code promo", variant: "destructive" });
+      toast({
+        title: "Erreur",
+        description: "Impossible de vérifier le code promo",
+        variant: "destructive",
+      });
     } finally {
       setIsApplyingPromo(false);
     }
@@ -626,7 +665,9 @@ export default function CheckoutPage() {
       timestamp: new Date().toISOString(),
       customerEmail: data.email,
       cartItemsCount: cartItems.length,
-      giftVoucherItemsCount: cartItems.filter((item) => item.type === "GIFT_VOUCHER").length,
+      giftVoucherItemsCount: cartItems.filter(
+        (item) => item.type === "GIFT_VOUCHER",
+      ).length,
     });
 
     setIsCreatingOrder(true);
@@ -656,7 +697,7 @@ export default function CheckoutPage() {
             },
             ...(appliedPromo ? { promoCodeId: appliedPromo.id } : {}),
           }),
-        }
+        },
       );
 
       const result = await response.json();
@@ -668,7 +709,9 @@ export default function CheckoutPage() {
       });
 
       if (result.success) {
-        const requiresPayment = result.data.requiresPayment !== false && result.data.paymentIntent !== null;
+        const requiresPayment =
+          result.data.requiresPayment !== false &&
+          result.data.paymentIntent !== null;
 
         if (!requiresPayment) {
           toast({
@@ -687,7 +730,8 @@ export default function CheckoutPage() {
       } else {
         toast({
           title: "Erreur",
-          description: result.message || "Erreur lors de la création de la commande",
+          description:
+            result.message || "Erreur lors de la création de la commande",
           variant: "destructive",
         });
       }
@@ -751,8 +795,9 @@ export default function CheckoutPage() {
   const promoSharesMap = new Map<string, number>();
   if (appliedPromo && appliedPromo.discountAmount > 0) {
     const types = appliedPromo.applicableProductTypes;
-    const getFullPrice = (item: typeof cartItems[0]) => {
-      if (item.type === "STAGE") return (item.stage?.price ?? 0) * item.quantity;
+    const getFullPrice = (item: (typeof cartItems)[0]) => {
+      if (item.type === "STAGE")
+        return (item.stage?.price ?? 0) * item.quantity;
       if (item.type === "BAPTEME") return getItemPrice(item) * item.quantity;
       return item.giftVoucherAmount ?? 0;
     };
@@ -764,16 +809,25 @@ export default function CheckoutPage() {
         return true;
       })
       .sort((a, b) => getFullPrice(b) - getFullPrice(a));
-    const applicableTotal = applicable.reduce((sum, item) => sum + getFullPrice(item), 0);
+    const applicableTotal = applicable.reduce(
+      (sum, item) => sum + getFullPrice(item),
+      0,
+    );
     if (applicableTotal > 0) {
       let assigned = 0;
       for (let i = 0; i < applicable.length; i++) {
         const item = applicable[i];
         const isLast = i === applicable.length - 1;
         if (isLast) {
-          promoSharesMap.set(item.id, Math.max(0, appliedPromo.discountAmount - assigned));
+          promoSharesMap.set(
+            item.id,
+            Math.max(0, appliedPromo.discountAmount - assigned),
+          );
         } else {
-          const share = Math.floor(appliedPromo.discountAmount * getFullPrice(item) / applicableTotal);
+          const share = Math.floor(
+            (appliedPromo.discountAmount * getFullPrice(item)) /
+              applicableTotal,
+          );
           promoSharesMap.set(item.id, share);
           assigned += share;
         }
@@ -791,18 +845,22 @@ export default function CheckoutPage() {
             item.type === "STAGE"
               ? getStageDeposit(item.stage)
               : item.type === "BAPTEME"
-              ? getBaptemeDeposit(item.bapteme, item.participantData)
-              : getItemPrice(item);
+                ? getBaptemeDeposit(item.bapteme, item.participantData)
+                : getItemPrice(item);
           const promoShare = promoSharesMap.get(item.id) ?? 0;
           const effectiveDeposit = Math.max(0, baseDeposit - promoShare);
           return (
             <div key={item.id} className="space-y-0.5">
               <div className="flex justify-between text-xs text-gray-600">
                 <span className="truncate mr-2 leading-tight">
-                  {item.type === "STAGE" ? `Acompte — ${getItemTitle(item)}` : getItemTitle(item)}
+                  {item.type === "STAGE"
+                    ? `Acompte — ${getItemTitle(item)}`
+                    : getItemTitle(item)}
                 </span>
                 <span className="font-medium whitespace-nowrap line-through text-gray-400">
-                  {promoShare > 0 ? `${baseDeposit.toFixed(2)}€` : `${baseDeposit.toFixed(2)}€`}
+                  {promoShare > 0
+                    ? `${baseDeposit.toFixed(2)}€`
+                    : `${baseDeposit.toFixed(2)}€`}
                 </span>
               </div>
               {promoShare > 0 && (
@@ -823,8 +881,13 @@ export default function CheckoutPage() {
       {cartItems
         .filter((item) => item.participantData?.usedGiftVoucherCode)
         .map((item) => (
-          <div key={item.id} className="flex justify-between text-xs text-green-600">
-            <span className="truncate mr-2">{getItemTitle(item)} (bon cadeau)</span>
+          <div
+            key={item.id}
+            className="flex justify-between text-xs text-green-600"
+          >
+            <span className="truncate mr-2">
+              {getItemTitle(item)} (bon cadeau)
+            </span>
             <span>0€</span>
           </div>
         ))}
@@ -835,8 +898,12 @@ export default function CheckoutPage() {
       </div>
       <Separator className="my-2" />
       <div className="flex justify-between items-baseline">
-        <p className="font-bold text-gray-900 text-sm">À payer aujourd&apos;hui</p>
-        <span className="text-xl font-bold text-blue-600">{todayAmount.toFixed(2)}€</span>
+        <p className="font-bold text-gray-900 text-sm">
+          À payer aujourd&apos;hui
+        </p>
+        <span className="text-xl font-bold text-blue-600">
+          {todayAmount.toFixed(2)}€
+        </span>
       </div>
     </div>
   );
@@ -847,21 +914,41 @@ export default function CheckoutPage() {
       <div className="bg-white border-b shadow-sm pt-16">
         <div className="max-w-6xl mx-auto px-4 py-3">
           <div className="flex items-center justify-center gap-3">
-            <div className={`flex items-center gap-2 ${step === "cart" ? "text-blue-600" : "text-emerald-600"}`}>
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${step === "cart" ? "bg-blue-600 text-white" : "bg-emerald-600 text-white"}`}>
+            <div
+              className={`flex items-center gap-2 ${step === "cart" ? "text-blue-600" : "text-emerald-600"}`}
+            >
+              <div
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${step === "cart" ? "bg-blue-600 text-white" : "bg-emerald-600 text-white"}`}
+              >
                 {step === "customer-info" ? "✓" : "1"}
               </div>
-              <span className="text-sm font-medium hidden sm:block">Panier</span>
+              <span className="text-sm font-medium hidden sm:block">
+                Panier
+              </span>
             </div>
-            <div className={`h-px w-10 ${step === "customer-info" ? "bg-blue-400" : "bg-gray-300"}`} />
-            <div className={`flex items-center gap-2 ${step === "customer-info" ? "text-blue-600" : "text-gray-400"}`}>
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${step === "customer-info" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-500"}`}>2</div>
-              <span className="text-sm font-medium hidden sm:block">Informations</span>
+            <div
+              className={`h-px w-10 ${step === "customer-info" ? "bg-blue-400" : "bg-gray-300"}`}
+            />
+            <div
+              className={`flex items-center gap-2 ${step === "customer-info" ? "text-blue-600" : "text-gray-400"}`}
+            >
+              <div
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${step === "customer-info" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-500"}`}
+              >
+                2
+              </div>
+              <span className="text-sm font-medium hidden sm:block">
+                Informations
+              </span>
             </div>
             <div className="h-px w-10 bg-gray-300" />
             <div className="flex items-center gap-2 text-gray-400">
-              <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">3</div>
-              <span className="text-sm font-medium hidden sm:block">Paiement</span>
+              <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">
+                3
+              </div>
+              <span className="text-sm font-medium hidden sm:block">
+                Paiement
+              </span>
             </div>
           </div>
         </div>
@@ -871,11 +958,12 @@ export default function CheckoutPage() {
         {step === "cart" ? (
           /* ── ÉTAPE 1 : Panier ─────────────────────────────────────── */
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
             {/* Colonne gauche — Articles (2/3) */}
             <div className="lg:col-span-2 space-y-4">
               {cartItems.some(
-                (item) => (item.type === "STAGE" || item.type === "BAPTEME") && item.expiresAt
+                (item) =>
+                  (item.type === "STAGE" || item.type === "BAPTEME") &&
+                  item.expiresAt,
               ) && <ReservationTimer cartItems={cartItems} />}
 
               <div className="flex items-center justify-between">
@@ -893,18 +981,29 @@ export default function CheckoutPage() {
                 return (
                   <div key={type} className="space-y-3">
                     <div className="flex items-center gap-2 px-1">
-                      <IconComponent className={`w-4 h-4 ${sectionInfo.color}`} />
-                      <h2 className={`text-xs font-semibold uppercase tracking-widest ${sectionInfo.color}`}>
+                      <IconComponent
+                        className={`w-4 h-4 ${sectionInfo.color}`}
+                      />
+                      <h2
+                        className={`text-xs font-semibold uppercase tracking-widest ${sectionInfo.color}`}
+                      >
                         {sectionInfo.title}
                       </h2>
                     </div>
 
                     {items.map((item) => (
-                      <div key={item.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                      <div
+                        key={item.id}
+                        className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden"
+                      >
                         <div className="p-4">
                           <div className="flex items-start gap-3">
-                            <div className={`p-2 rounded-lg ${sectionInfo.bgColor} flex-shrink-0 mt-0.5`}>
-                              <IconComponent className={`w-4 h-4 ${sectionInfo.color}`} />
+                            <div
+                              className={`p-2 rounded-lg ${sectionInfo.bgColor} flex-shrink-0 mt-0.5`}
+                            >
+                              <IconComponent
+                                className={`w-4 h-4 ${sectionInfo.color}`}
+                              />
                             </div>
 
                             <div className="flex-1 min-w-0">
@@ -916,81 +1015,127 @@ export default function CheckoutPage() {
                                   ? `Pour : ${item.participantData.recipientName}`
                                   : `Pour : ${item.participantData.firstName} ${item.participantData.lastName}`}
                               </p>
-                              {item.type === "BAPTEME" && item.bapteme?.startTime && item.bapteme?.duration && (
-                                <p className="text-xs text-blue-600 mt-1 font-medium">
-                                  🕐 {formatTimeSlot(item.bapteme.startTime, item.bapteme.duration)}
-                                </p>
-                              )}
-                              {(item.type === "BAPTEME" || item.type === "STAGE" || item.type === "GIFT_VOUCHER") && (
+                              {item.type === "BAPTEME" &&
+                                item.bapteme?.startTime &&
+                                item.bapteme?.duration && (
+                                  <p className="text-xs text-blue-600 mt-1 font-medium">
+                                    🕐{" "}
+                                    {formatTimeSlot(
+                                      item.bapteme.startTime,
+                                      item.bapteme.duration,
+                                    )}
+                                  </p>
+                                )}
+                              {(item.type === "BAPTEME" ||
+                                item.type === "STAGE" ||
+                                item.type === "GIFT_VOUCHER") && (
                                 <button
                                   type="button"
                                   onClick={() => toggleItemDetails(item.id)}
                                   className="mt-1.5 text-xs text-blue-500 hover:text-blue-700 flex items-center gap-1"
                                 >
-                                  {expandedDetails[item.id] ? "Masquer" : "Voir"} les détails
-                                  <ChevronDown className={`w-3 h-3 transition-transform ${expandedDetails[item.id] ? "rotate-180" : ""}`} />
+                                  {expandedDetails[item.id]
+                                    ? "Masquer"
+                                    : "Voir"}{" "}
+                                  les détails
+                                  <ChevronDown
+                                    className={`w-3 h-3 transition-transform ${expandedDetails[item.id] ? "rotate-180" : ""}`}
+                                  />
                                 </button>
                               )}
                             </div>
 
                             <div className="flex flex-col items-end gap-1 flex-shrink-0 text-right">
-                              {item.type === "STAGE" && !item.participantData?.usedGiftVoucherCode && (
-                                <div className="text-right">
-                                  {item.stage?.promotionOriginalPrice && item.stage.price < item.stage.promotionOriginalPrice && (
-                                    <p className="text-xs text-gray-400 line-through">{item.stage.promotionOriginalPrice}€</p>
-                                  )}
-                                  <p className="text-sm font-bold text-gray-800">{item.stage?.price}€</p>
-                                  {(() => {
-                                    const dep = getStageDeposit(item.stage);
-                                    const share = promoSharesMap.get(item.id) ?? 0;
-                                    const effDep = Math.max(0, dep - share);
-                                    return (
-                                      <>
-                                        {share > 0 ? (
-                                          <>
-                                            <p className="text-xs text-green-600 font-semibold">Réduction : -{share}€</p>
-                                            <p className="text-xs text-orange-600 font-semibold">Acompte : {effDep}€</p>
-                                          </>
-                                        ) : (
-                                          <p className="text-xs text-orange-600">Acompte : {dep}€</p>
-                                        )}
-                                        <p className="text-xs text-gray-500">Solde : {getStageRemaining(item.stage)}€</p>
-                                      </>
-                                    );
-                                  })()}
-                                </div>
-                              )}
-                              {item.type === "BAPTEME" && !item.participantData?.usedGiftVoucherCode && (
-                                <div className="text-right">
-                                  <p className="text-sm font-bold text-gray-800">{getItemPrice(item)}€</p>
-                                  {(() => {
-                                    const dep = getBaptemeDeposit(item.bapteme, item.participantData);
-                                    const share = promoSharesMap.get(item.id) ?? 0;
-                                    const effDep = Math.max(0, dep - share);
-                                    return (
-                                      <>
-                                        {share > 0 ? (
-                                          <>
-                                            <p className="text-xs text-green-600 font-semibold">Réduction : -{share}€</p>
-                                            <p className="text-xs text-orange-600 font-semibold">Acompte : {effDep}€</p>
-                                          </>
-                                        ) : (
-                                          <p className="text-xs text-orange-600">
-                                            Acompte : {dep}€
-                                          </p>
-                                        )}
-                                      </>
-                                    );
-                                  })()}
-                                  {item.participantData.hasVideo && (
-                                    <p className="text-xs text-green-600">
-                                      + Vidéo : {pricesLoading ? "…" : `${videoOptionPrice}€`}
+                              {item.type === "STAGE" &&
+                                !item.participantData?.usedGiftVoucherCode && (
+                                  <div className="text-right">
+                                    {item.stage?.promotionOriginalPrice &&
+                                      item.stage.price <
+                                        item.stage.promotionOriginalPrice && (
+                                        <p className="text-xs text-gray-400 line-through">
+                                          {item.stage.promotionOriginalPrice}€
+                                        </p>
+                                      )}
+                                    <p className="text-sm font-bold text-gray-800">
+                                      {item.stage?.price}€
                                     </p>
-                                  )}
-                                </div>
-                              )}
+                                    {(() => {
+                                      const dep = getStageDeposit(item.stage);
+                                      const share =
+                                        promoSharesMap.get(item.id) ?? 0;
+                                      const effDep = Math.max(0, dep - share);
+                                      return (
+                                        <>
+                                          {share > 0 ? (
+                                            <>
+                                              <p className="text-xs text-green-600 font-semibold">
+                                                Réduction : -{share}€
+                                              </p>
+                                              <p className="text-xs text-orange-600 font-semibold">
+                                                Acompte : {effDep}€
+                                              </p>
+                                            </>
+                                          ) : (
+                                            <p className="text-xs text-orange-600">
+                                              Acompte : {dep}€
+                                            </p>
+                                          )}
+                                          <p className="text-xs text-gray-500">
+                                            Solde :{" "}
+                                            {getStageRemaining(item.stage)}€
+                                          </p>
+                                        </>
+                                      );
+                                    })()}
+                                  </div>
+                                )}
+                              {item.type === "BAPTEME" &&
+                                !item.participantData?.usedGiftVoucherCode && (
+                                  <div className="text-right">
+                                    <p className="text-sm font-bold text-gray-800">
+                                      {getItemPrice(item)}€
+                                    </p>
+                                    {(() => {
+                                      const dep = getBaptemeDeposit(
+                                        item.bapteme,
+                                        item.participantData,
+                                      );
+                                      const share =
+                                        promoSharesMap.get(item.id) ?? 0;
+                                      const effDep = Math.max(0, dep - share);
+                                      return (
+                                        <>
+                                          {share > 0 ? (
+                                            <>
+                                              <p className="text-xs text-green-600 font-semibold">
+                                                Réduction : -{share}€
+                                              </p>
+                                              <p className="text-xs text-orange-600 font-semibold">
+                                                Acompte : {effDep}€
+                                              </p>
+                                            </>
+                                          ) : (
+                                            <p className="text-xs text-orange-600">
+                                              Acompte : {dep}€
+                                            </p>
+                                          )}
+                                        </>
+                                      );
+                                    })()}
+                                    {item.participantData.hasVideo && (
+                                      <p className="text-xs text-green-600">
+                                        + Vidéo :{" "}
+                                        {pricesLoading
+                                          ? "…"
+                                          : `${videoOptionPrice}€`}
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
                               {item.type === "GIFT_VOUCHER" && (
-                                <p className="text-sm font-bold text-gray-800">{getItemPrice(item)}€</p>
+                                <p className="text-sm font-bold text-gray-800">
+                                  {getItemPrice(item)}€
+                                </p>
                               )}
                               {item.participantData?.usedGiftVoucherCode && (
                                 <Badge className="bg-green-100 text-green-700 border-green-200 text-xs border">
@@ -1025,25 +1170,27 @@ export default function CheckoutPage() {
                             </div>
                           )}
 
-                        {(item.type === "BAPTEME" || item.type === "STAGE") && expandedDetails[item.id] && (
-                          <div className="border-t border-gray-100 p-4 bg-gray-50">
-                            <EditableParticipantDetails
-                              participantData={item.participantData}
-                              type={item.type as "BAPTEME" | "STAGE"}
-                              itemId={item.id}
-                              onUpdate={() => loadCartItems(true)}
-                            />
-                          </div>
-                        )}
-                        {item.type === "GIFT_VOUCHER" && expandedDetails[item.id] && (
-                          <div className="border-t border-gray-100 p-4 bg-gray-50">
-                            <GiftVoucherDetails
-                              participantData={item.participantData}
-                              itemId={item.id}
-                              onUpdate={() => loadCartItems(true)}
-                            />
-                          </div>
-                        )}
+                        {(item.type === "BAPTEME" || item.type === "STAGE") &&
+                          expandedDetails[item.id] && (
+                            <div className="border-t border-gray-100 p-4 bg-gray-50">
+                              <EditableParticipantDetails
+                                participantData={item.participantData}
+                                type={item.type as "BAPTEME" | "STAGE"}
+                                itemId={item.id}
+                                onUpdate={() => loadCartItems(true)}
+                              />
+                            </div>
+                          )}
+                        {item.type === "GIFT_VOUCHER" &&
+                          expandedDetails[item.id] && (
+                            <div className="border-t border-gray-100 p-4 bg-gray-50">
+                              <GiftVoucherDetails
+                                participantData={item.participantData}
+                                itemId={item.id}
+                                onUpdate={() => loadCartItems(true)}
+                              />
+                            </div>
+                          )}
                       </div>
                     ))}
                   </div>
@@ -1054,55 +1201,72 @@ export default function CheckoutPage() {
             {/* Colonne droite — Code promo + Récapitulatif + CTA (1/3) */}
             <div className="space-y-4 lg:sticky lg:top-6 h-fit">
               {/* Code promo — masqué si panier déjà gratuit */}
-              {totals.depositTotal > 0 && <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                <h3 className="font-semibold text-sm text-gray-700 flex items-center gap-2 mb-3">
-                  <Tag className="w-4 h-4 text-gray-400" />
-                  Code promo
-                </h3>
-                {appliedPromo ? (
-                  <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <div>
-                      <p className="text-sm font-semibold text-green-800">
-                        <strong>{appliedPromo.code}</strong> appliqué
-                      </p>
-                      <p className="text-xs text-green-600 mt-0.5">
-                        -{appliedPromo.discountAmount.toFixed(2)}€ de réduction
-                      </p>
+              {totals.depositTotal > 0 && (
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+                  <h3 className="font-semibold text-sm text-gray-700 flex items-center gap-2 mb-3">
+                    <Tag className="w-4 h-4 text-gray-400" />
+                    Code promo
+                  </h3>
+                  {appliedPromo ? (
+                    <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div>
+                        <p className="text-sm font-semibold text-green-800">
+                          <strong>{appliedPromo.code}</strong> appliqué
+                        </p>
+                        <p className="text-xs text-green-600 mt-0.5">
+                          -{appliedPromo.discountAmount.toFixed(2)}€ de
+                          réduction
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAppliedPromo(null);
+                          setPromoCodeInput("");
+                        }}
+                        className="text-green-600 hover:text-green-800"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => { setAppliedPromo(null); setPromoCodeInput(""); }}
-                      className="text-green-600 hover:text-green-800"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <Input
-                      value={promoCodeInput}
-                      onChange={(e) => setPromoCodeInput(e.target.value.toUpperCase())}
-                      placeholder="Code promo"
-                      className="uppercase text-sm"
-                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), applyPromoCode())}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={applyPromoCode}
-                      disabled={isApplyingPromo || !promoCodeInput.trim()}
-                      className="shrink-0"
-                    >
-                      {isApplyingPromo ? <Loader2 className="w-4 h-4 animate-spin" /> : "OK"}
-                    </Button>
-                  </div>
-                )}
-              </div>}
+                  ) : (
+                    <div className="flex gap-2">
+                      <Input
+                        value={promoCodeInput}
+                        onChange={(e) =>
+                          setPromoCodeInput(e.target.value.toUpperCase())
+                        }
+                        placeholder="Code promo"
+                        className="uppercase text-sm"
+                        onKeyDown={(e) =>
+                          e.key === "Enter" &&
+                          (e.preventDefault(), applyPromoCode())
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={applyPromoCode}
+                        disabled={isApplyingPromo || !promoCodeInput.trim()}
+                        className="shrink-0"
+                      >
+                        {isApplyingPromo ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          "OK"
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Récapitulatif */}
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                <h3 className="font-semibold text-sm text-gray-700 mb-3">Récapitulatif</h3>
+                <h3 className="font-semibold text-sm text-gray-700 mb-3">
+                  Récapitulatif
+                </h3>
                 <SummaryLines />
               </div>
 
@@ -1119,13 +1283,20 @@ export default function CheckoutPage() {
               {totals.remainingTotal > 0 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2">
                   <div className="flex items-start gap-2">
-                    <span className="text-amber-500 text-base leading-none mt-0.5">ℹ️</span>
+                    <span className="text-amber-500 text-base leading-none mt-0.5">
+                      ℹ️
+                    </span>
                     <div className="space-y-1.5 text-xs text-amber-900">
                       <p>
-                        <strong>Acompte de {todayAmount.toFixed(2)}€</strong> à régler aujourd&apos;hui pour confirmer votre réservation.
+                        <strong>Acompte de {todayAmount.toFixed(2)}€</strong> à
+                        régler aujourd&apos;hui pour confirmer votre
+                        réservation.
                       </p>
                       <p>
-                        Le solde de <strong>{totals.remainingTotal.toFixed(2)}€</strong> sera réglé directement sur place le jour de votre activité.
+                        Le solde de{" "}
+                        <strong>{totals.remainingTotal.toFixed(2)}€</strong>{" "}
+                        sera réglé directement sur place le jour de votre
+                        activité.
                       </p>
                     </div>
                   </div>
@@ -1144,15 +1315,15 @@ export default function CheckoutPage() {
               </div>
             </div>
           </div>
-
         ) : (
           /* ── ÉTAPE 2 : Informations ───────────────────────────────── */
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
             {/* Colonne gauche — Formulaire (2/3) */}
             <div className="lg:col-span-2">
               {cartItems.some(
-                (item) => (item.type === "STAGE" || item.type === "BAPTEME") && item.expiresAt
+                (item) =>
+                  (item.type === "STAGE" || item.type === "BAPTEME") &&
+                  item.expiresAt,
               ) && (
                 <div className="mb-4">
                   <ReservationTimer cartItems={cartItems} compact />
@@ -1161,13 +1332,19 @@ export default function CheckoutPage() {
 
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
                 <div className="p-6 border-b border-gray-100">
-                  <h1 className="text-xl font-bold text-gray-900">Vos informations</h1>
+                  <h1 className="text-xl font-bold text-gray-900">
+                    Vos informations
+                  </h1>
                   <p className="text-sm text-gray-500 mt-1">
                     Renseignez vos coordonnées pour finaliser la réservation
                   </p>
                 </div>
 
-                <form id="checkout-form" onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
+                <form
+                  id="checkout-form"
+                  onSubmit={handleSubmit(onSubmit)}
+                  className="p-6 space-y-6"
+                >
                   {/* Contact */}
                   <div className="space-y-4">
                     <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
@@ -1178,12 +1355,16 @@ export default function CheckoutPage() {
                         <Label htmlFor="firstName">Prénom *</Label>
                         <Input
                           id="firstName"
-                          {...register("firstName", { required: "Prénom requis" })}
+                          {...register("firstName", {
+                            required: "Prénom requis",
+                          })}
                           placeholder="Jean"
                           className="mt-1"
                         />
                         {errors.firstName && (
-                          <p className="text-red-500 text-xs mt-1">{errors.firstName.message}</p>
+                          <p className="text-red-500 text-xs mt-1">
+                            {errors.firstName.message}
+                          </p>
                         )}
                       </div>
                       <div>
@@ -1195,7 +1376,9 @@ export default function CheckoutPage() {
                           className="mt-1"
                         />
                         {errors.lastName && (
-                          <p className="text-red-500 text-xs mt-1">{errors.lastName.message}</p>
+                          <p className="text-red-500 text-xs mt-1">
+                            {errors.lastName.message}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -1209,7 +1392,9 @@ export default function CheckoutPage() {
                         className="mt-1"
                       />
                       {errors.email && (
-                        <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
+                        <p className="text-red-500 text-xs mt-1">
+                          {errors.email.message}
+                        </p>
                       )}
                     </div>
                     <div>
@@ -1221,7 +1406,9 @@ export default function CheckoutPage() {
                         className="mt-1"
                       />
                       {errors.phone && (
-                        <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>
+                        <p className="text-red-500 text-xs mt-1">
+                          {errors.phone.message}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -1237,12 +1424,16 @@ export default function CheckoutPage() {
                       <Label htmlFor="address">Adresse *</Label>
                       <Input
                         id="address"
-                        {...register("address", { required: "Adresse requise" })}
+                        {...register("address", {
+                          required: "Adresse requise",
+                        })}
                         placeholder="123 Rue de la Paix"
                         className="mt-1"
                       />
                       {errors.address && (
-                        <p className="text-red-500 text-xs mt-1">{errors.address.message}</p>
+                        <p className="text-red-500 text-xs mt-1">
+                          {errors.address.message}
+                        </p>
                       )}
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -1250,12 +1441,16 @@ export default function CheckoutPage() {
                         <Label htmlFor="postalCode">Code postal *</Label>
                         <Input
                           id="postalCode"
-                          {...register("postalCode", { required: "Code postal requis" })}
+                          {...register("postalCode", {
+                            required: "Code postal requis",
+                          })}
                           placeholder="75001"
                           className="mt-1"
                         />
                         {errors.postalCode && (
-                          <p className="text-red-500 text-xs mt-1">{errors.postalCode.message}</p>
+                          <p className="text-red-500 text-xs mt-1">
+                            {errors.postalCode.message}
+                          </p>
                         )}
                       </div>
                       <div>
@@ -1267,7 +1462,9 @@ export default function CheckoutPage() {
                           className="mt-1"
                         />
                         {errors.city && (
-                          <p className="text-red-500 text-xs mt-1">{errors.city.message}</p>
+                          <p className="text-red-500 text-xs mt-1">
+                            {errors.city.message}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -1281,7 +1478,9 @@ export default function CheckoutPage() {
                         className="mt-1"
                       />
                       {errors.country && (
-                        <p className="text-red-500 text-xs mt-1">{errors.country.message}</p>
+                        <p className="text-red-500 text-xs mt-1">
+                          {errors.country.message}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -1298,24 +1497,38 @@ export default function CheckoutPage() {
                         type="checkbox"
                         id="acceptedCGV"
                         {...register("acceptedCGV", {
-                          required: "Vous devez accepter les CGV pour continuer",
+                          required:
+                            "Vous devez accepter les CGV pour continuer",
                         })}
                         className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
                       <div>
-                        <Label htmlFor="acceptedCGV" className="cursor-pointer text-sm text-gray-700">
+                        <Label
+                          htmlFor="acceptedCGV"
+                          className="cursor-pointer text-sm text-gray-700"
+                        >
                           J&apos;accepte les{" "}
-                          <a href="/cgv" target="_blank" className="underline text-blue-600">
+                          <a
+                            href="/cgv"
+                            target="_blank"
+                            className="underline text-blue-600"
+                          >
                             CGV
                           </a>{" "}
                           et la{" "}
-                          <a href="/privacy" target="_blank" className="underline text-blue-600">
+                          <a
+                            href="/privacy"
+                            target="_blank"
+                            className="underline text-blue-600"
+                          >
                             Politique de confidentialité
                           </a>{" "}
                           *
                         </Label>
                         {errors.acceptedCGV && (
-                          <p className="text-red-500 text-xs mt-1">{errors.acceptedCGV.message}</p>
+                          <p className="text-red-500 text-xs mt-1">
+                            {errors.acceptedCGV.message}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -1326,9 +1539,15 @@ export default function CheckoutPage() {
                         {...register("acceptedMarketing")}
                         className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
-                      <Label htmlFor="acceptedMarketing" className="cursor-pointer text-sm text-gray-700">
-                        J&apos;accepte de recevoir des offres commerciales de Serre Chevalier Parapente{" "}
-                        <span className="text-gray-400 text-xs">(optionnel)</span>
+                      <Label
+                        htmlFor="acceptedMarketing"
+                        className="cursor-pointer text-sm text-gray-700"
+                      >
+                        J&apos;accepte de recevoir des offres commerciales de
+                        Serre Chevalier Parapente{" "}
+                        <span className="text-gray-400 text-xs">
+                          (optionnel)
+                        </span>
                       </Label>
                     </div>
                   </div>
@@ -1340,7 +1559,9 @@ export default function CheckoutPage() {
                     disabled={isCreatingOrder}
                   >
                     <CreditCard className="w-4 h-4 mr-2" />
-                    {isCreatingOrder ? "Création en cours…" : `Payer ${todayAmount.toFixed(2)}€`}
+                    {isCreatingOrder
+                      ? "Création en cours…"
+                      : `Payer ${todayAmount.toFixed(2)}€`}
                   </Button>
                 </form>
               </div>
@@ -1350,7 +1571,9 @@ export default function CheckoutPage() {
             <div className="space-y-4 lg:sticky lg:top-6 h-fit">
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-sm text-gray-700">Récapitulatif</h3>
+                  <h3 className="font-semibold text-sm text-gray-700">
+                    Récapitulatif
+                  </h3>
                   <button
                     type="button"
                     onClick={() => setStep("cart")}
@@ -1370,20 +1593,29 @@ export default function CheckoutPage() {
                 disabled={isCreatingOrder}
               >
                 <CreditCard className="w-4 h-4 mr-2" />
-                {isCreatingOrder ? "Création en cours…" : `Payer ${todayAmount.toFixed(2)}€`}
+                {isCreatingOrder
+                  ? "Création en cours…"
+                  : `Payer ${todayAmount.toFixed(2)}€`}
               </Button>
 
               {/* Info acompte / solde */}
               {totals.remainingTotal > 0 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2">
                   <div className="flex items-start gap-2">
-                    <span className="text-amber-500 text-base leading-none mt-0.5">ℹ️</span>
+                    <span className="text-amber-500 text-base leading-none mt-0.5">
+                      ℹ️
+                    </span>
                     <div className="space-y-1.5 text-xs text-amber-900">
                       <p>
-                        <strong>Acompte de {todayAmount.toFixed(2)}€</strong> à régler aujourd&apos;hui pour confirmer votre réservation.
+                        <strong>Acompte de {todayAmount.toFixed(2)}€</strong> à
+                        régler aujourd&apos;hui pour confirmer votre
+                        réservation.
                       </p>
                       <p>
-                        Le solde de <strong>{totals.remainingTotal.toFixed(2)}€</strong> sera réglé directement sur place le jour de votre activité.
+                        Le solde de{" "}
+                        <strong>{totals.remainingTotal.toFixed(2)}€</strong>{" "}
+                        sera réglé directement sur place le jour de votre
+                        activité.
                       </p>
                     </div>
                   </div>
@@ -1397,79 +1629,75 @@ export default function CheckoutPage() {
                 <span>Stripe</span>
               </div>
             </div>
-
           </div>
         )}
       </div>
 
       {/* Dialog de confirmation de suppression */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
-              <AlertTriangle className="w-5 h-5" />
-              Confirmer la suppression
-            </DialogTitle>
-            <DialogDescription className="pt-4">
-              {itemToDelete && (
-                <div className="space-y-3">
-                  <p className="text-gray-700">
-                    Êtes-vous sûr de vouloir supprimer cet article de votre panier ?
+      <ResponsiveModal
+        title="Supression d'un article"
+        description=""
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
+        {itemToDelete && (
+          <div className="space-y-3">
+            <p className="text-gray-700">
+              Êtes-vous sûr de vouloir supprimer cet article de votre panier ?
+            </p>
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <p className="font-semibold text-sm text-gray-800">
+                {getItemTitle(itemToDelete)}
+              </p>
+              <p className="text-xs text-gray-600 mt-1">
+                Pour: {itemToDelete.participantData.firstName}{" "}
+                {itemToDelete.participantData.lastName}
+              </p>
+              {itemToDelete.type === "BAPTEME" &&
+                itemToDelete.bapteme?.startTime &&
+                itemToDelete.bapteme?.duration && (
+                  <p className="text-xs text-blue-600 font-medium mt-1">
+                    🕐{" "}
+                    {formatTimeSlot(
+                      itemToDelete.bapteme.startTime,
+                      itemToDelete.bapteme.duration,
+                    )}
                   </p>
-                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                    <p className="font-semibold text-sm text-gray-800">
-                      {getItemTitle(itemToDelete)}
-                    </p>
-                    <p className="text-xs text-gray-600 mt-1">
-                      Pour: {itemToDelete.participantData.firstName}{" "}
-                      {itemToDelete.participantData.lastName}
-                    </p>
-                    {itemToDelete.type === "BAPTEME" &&
-                      itemToDelete.bapteme?.startTime &&
-                      itemToDelete.bapteme?.duration && (
-                        <p className="text-xs text-blue-600 font-medium mt-1">
-                          🕐{" "}
-                          {formatTimeSlot(
-                            itemToDelete.bapteme.startTime,
-                            itemToDelete.bapteme.duration
-                          )}
-                        </p>
-                      )}
-                    {itemToDelete.type === "BAPTEME" &&
-                      itemToDelete.participantData.hasVideo && (
-                        <p className="text-xs text-green-600 font-medium mt-1">
-                          + Option vidéo
-                        </p>
-                      )}
-                    <p className="text-sm font-bold text-gray-800 mt-2">
-                      {getItemPrice(itemToDelete)}€
-                    </p>
-                  </div>
-                </div>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => setIsDeleteDialogOpen(false)}
-              className="flex-1"
-            >
-              Annuler
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmRemoveItem}
-              className="flex-1 bg-red-600 hover:bg-red-700"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Supprimer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                )}
+              {itemToDelete.type === "BAPTEME" &&
+                itemToDelete.participantData.hasVideo && (
+                  <p className="text-xs text-green-600 font-medium mt-1">
+                    + Option vidéo
+                  </p>
+                )}
+              <p className="text-sm font-bold text-gray-800 mt-2">
+                {getItemPrice(itemToDelete)}€
+              </p>
+            </div>
+          </div>
+        )}
+        <div className="flex flex-col md:flex-row gap-2 mt-4 md:mt-0">
+          <Button
+            variant="outline"
+            onClick={() => setIsDeleteDialogOpen(false)}
+            className="flex-1"
+          >
+            Annuler
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={confirmRemoveItem}
+            className="flex-1 bg-red-600 hover:bg-red-700"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Supprimer
+          </Button>
+        </div>
+      </ResponsiveModal>
 
-      {isUpdating && <LoadingOverlay message="Mise à jour de votre panier..." />}
+      {isUpdating && (
+        <LoadingOverlay message="Mise à jour de votre panier..." />
+      )}
     </div>
   );
 }

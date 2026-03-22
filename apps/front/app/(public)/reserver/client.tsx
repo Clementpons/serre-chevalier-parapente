@@ -161,7 +161,7 @@ export default function ReserverClientPage() {
               return (
                 <Card
                   key={product.id}
-                  className={`relative transition-all flex items-center gap-4 p-6 bg-slate-800 hover:shadow-lg hover:-translate-y-1 ${
+                  className={`relative transition-all flex flex-col sm:flex-row items-center gap-4 p-6 bg-slate-800 hover:shadow-lg hover:-translate-y-1 ${
                     product.popular ? "ring-2 ring-blue-500 border-none" : ""
                   }`}
                 >
@@ -171,16 +171,16 @@ export default function ReserverClientPage() {
                     </Badge>
                   )}
 
-                  <CardHeader className="w-1/2 h-full flex flex-col justify-center items-center gap-4 p-0">
+                  <CardHeader className="w-full sm:w-1/2 flex flex-col justify-center items-center gap-4 p-0">
                     <div className="flex items-center gap-6">
-                      <div className="w-16 h-16 mx-auto bg-blue-600 rounded-full flex items-center justify-center">
+                      <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center shrink-0">
                         <IconComponent className="w-8 h-8 text-white" />
                       </div>
                       <CardTitle className="text-2xl text-white">
                         {product.title}
                       </CardTitle>
                     </div>
-                    <Link href={product.href} className="block">
+                    <Link href={product.href} className="block w-full">
                       <Button
                         className="w-full gap-2"
                         size="lg"
@@ -199,15 +199,15 @@ export default function ReserverClientPage() {
                     </Link>
                   </CardHeader>
 
-                  <CardContent className="space-y-6 w-1/2">
-                    <p className="text-white text-balance">
+                  <CardContent className="space-y-4 w-full sm:w-1/2 pb-0 sm:pb-6">
+                    <p className="text-white text-balance text-center sm:text-left">
                       {product.description}
                     </p>
 
                     <div className="space-y-2">
                       {product.features.map((feature, index) => (
                         <div key={index} className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
+                          <div className="w-1.5 h-1.5 bg-blue-600 rounded-full shrink-0"></div>
                           <span className="text-sm text-white">
                             {feature}
                           </span>

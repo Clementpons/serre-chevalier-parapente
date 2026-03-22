@@ -1,16 +1,6 @@
 "use client";
 
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -18,13 +8,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ResponsiveModal } from "@/components/responsive-modal";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Stage, User, StageBooking } from "@prisma/client";
 import { useState } from "react";
-import { PlusIcon, MinusIcon, EditIcon, TrashIcon, SaveIcon2, XIcon, TagIcon, XCircleIcon } from "@/lib/icons";
+import {
+  PlusIcon,
+  MinusIcon,
+  EditIcon,
+  TrashIcon,
+  SaveIcon2,
+  XIcon,
+  TagIcon,
+  XCircleIcon,
+} from "@/lib/icons";
 import { useGetMoniteursAndAdmins } from "@/features/users/api/use-get-moniteurs-and-admins";
 import { useGetStageById } from "../api/use-get-stage";
 import { useUpdateStage } from "../api/use-update-stages";
@@ -34,10 +38,10 @@ import { useCancelStagePromotion } from "../api/use-cancel-stage-promotion";
 import { toast } from "sonner";
 import { MultiSelect } from "@/components/ui/multi-select";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 interface StageWithDetails extends Stage {
-  moniteurs: Array<{
-    moniteur: User;
-  }>;
+  moniteurs: Array<{ moniteur: User }>;
   bookings: any[];
   acomptePrice: number;
 }
@@ -48,6 +52,17 @@ interface StageDetailsSheetProps {
   stage: StageWithDetails | null;
   role?: string;
 }
+
+// ─── Config couleurs ──────────────────────────────────────────────────────────
+
+const TYPE_CONFIG: Record<string, { hex: string; label: string; badgeCls: string }> = {
+  INITIATION:  { hex: "#38bdf8", label: "Initiation",  badgeCls: "bg-sky-100 text-sky-800 border-sky-200" },
+  PROGRESSION: { hex: "#3b82f6", label: "Progression", badgeCls: "bg-blue-100 text-blue-800 border-blue-200" },
+  AUTONOMIE:   { hex: "#1e40af", label: "Autonomie",   badgeCls: "bg-blue-100 text-blue-900 border-blue-300" },
+  DOUBLE:      { hex: "#8b5cf6", label: "Double",      badgeCls: "bg-violet-100 text-violet-800 border-violet-200" },
+};
+
+// ─── Composant ────────────────────────────────────────────────────────────────
 
 export function StageDetailsSheet({
   open,
@@ -72,9 +87,7 @@ export function StageDetailsSheet({
   } | null>(null);
 
   const { data: moniteurs } = useGetMoniteursAndAdmins();
-  const { data: fullStageData, isLoading: isLoadingDetails } = useGetStageById(
-    stage?.id || "",
-  );
+  const { data: fullStageData, isLoading: isLoadingDetails } = useGetStageById(stage?.id || "");
 
   const displayStage = fullStageData || stage;
 
@@ -85,7 +98,6 @@ export function StageDetailsSheet({
 
   if (!displayStage) return null;
 
-  // Use optional chaining for bookings as it might be undefined in basic stage object
   const bookings = fullStageData?.bookings || [];
   const currentBookingsCount =
     fullStageData?.bookings?.length ??
@@ -93,6 +105,16 @@ export function StageDetailsSheet({
     0;
 
   const placesRestantes = displayStage.places - currentBookingsCount;
+  const hasActivePromotion = !!(displayStage as any).promotionOriginalPrice;
+  const cfg = TYPE_CONFIG[displayStage.type] ?? {
+    hex: "#94a3b8",
+    label: displayStage.type,
+    badgeCls: "bg-slate-100 text-slate-700 border-slate-200",
+  };
+
+  const endDate = addDays(new Date(displayStage.startDate), displayStage.duration - 1);
+
+  // ─── Handlers ──────────────────────────────────────────────────────────────
 
   const handleEdit = () => {
     setEditedStage({
@@ -111,7 +133,6 @@ export function StageDetailsSheet({
 
   const handleSave = () => {
     if (!editedStage) return;
-
     updateStage.mutate(
       {
         param: { id: displayStage.id },
@@ -129,36 +150,27 @@ export function StageDetailsSheet({
         onSuccess: () => {
           setIsEditing(false);
           setEditedStage(null);
-          onOpenChange(false);
         },
-      },
+      }
     );
   };
 
   const handleIncreasePlaces = () => {
     if (!editedStage) return;
-    setEditedStage({
-      ...editedStage,
-      places: editedStage.places + 1,
-    });
+    setEditedStage({ ...editedStage, places: editedStage.places + 1 });
   };
 
   const handleDecreasePlaces = () => {
     if (!editedStage) return;
     if (editedStage.places <= currentBookingsCount) {
-      toast.error(
-        `Impossible de réduire en dessous de ${currentBookingsCount} places (nombre de réservations actuelles)`,
-      );
+      toast.error(`Impossible de réduire en dessous de ${currentBookingsCount} places`);
       return;
     }
     if (editedStage.places <= 1) {
       toast.error("Le nombre de places doit être supérieur à 0");
       return;
     }
-    setEditedStage({
-      ...editedStage,
-      places: editedStage.places - 1,
-    });
+    setEditedStage({ ...editedStage, places: editedStage.places - 1 });
   };
 
   const handleDelete = () => {
@@ -166,15 +178,7 @@ export function StageDetailsSheet({
       toast.error("Impossible de supprimer un stage avec des réservations");
       return;
     }
-
-    deleteStage.mutate(
-      { id: displayStage.id },
-      {
-        onSuccess: () => {
-          onOpenChange(false);
-        },
-      },
-    );
+    deleteStage.mutate({ id: displayStage.id }, { onSuccess: () => onOpenChange(false) });
   };
 
   const handleApplyPromotion = () => {
@@ -187,7 +191,6 @@ export function StageDetailsSheet({
       toast.error("Le prix promotionnel doit être inférieur au prix actuel");
       return;
     }
-
     applyPromotion.mutate(
       {
         param: { id: displayStage.id },
@@ -204,92 +207,89 @@ export function StageDetailsSheet({
             setPromotionForm({ newPrice: "", endDate: "", reason: "" });
           }
         },
-      },
+      }
     );
   };
 
   const handleCancelPromotion = () => {
     cancelPromotion.mutate(
       { id: displayStage.id },
-      {
-        onSuccess: () => {
-          setShowCancelPromotionDialog(false);
-        },
-      },
+      { onSuccess: () => setShowCancelPromotionDialog(false) }
     );
   };
 
-  const hasActivePromotion = !!(displayStage as any).promotionOriginalPrice;
+  // ─── Rendu ─────────────────────────────────────────────────────────────────
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case "INITIATION":
-        return "bg-blue-100 text-blue-800";
-      case "PROGRESSION":
-        return "bg-green-100 text-green-800";
-      case "AUTONOMIE":
-        return "bg-purple-100 text-purple-800";
-      case "DOUBLE":
-        return "bg-orange-100 text-orange-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+  const discountPct =
+    hasActivePromotion && (displayStage as any).promotionOriginalPrice
+      ? Math.round(
+          (1 - displayStage.price / (displayStage as any).promotionOriginalPrice) * 100
+        )
+      : 0;
 
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case "INITIATION":
-        return "Initiation";
-      case "PROGRESSION":
-        return "Progression";
-      case "AUTONOMIE":
-        return "Autonomie";
-      case "DOUBLE":
-        return "Double";
-      default:
-        return type;
-    }
-  };
+  const currentPlaces = isEditing && editedStage ? editedStage.places : displayStage.places;
+  const currentRestantes = isEditing && editedStage
+    ? editedStage.places - currentBookingsCount
+    : placesRestantes;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-[400px] sm:w-[540px]">
-        <SheetHeader>
-          <SheetTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              Stage {getTypeLabel(displayStage.type)}
-              <Badge className={getTypeColor(displayStage.type)}>
-                {getTypeLabel(displayStage.type)}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-2">
-              {!isEditing ? (
-                <>
-                  {role === "ADMIN" && (
+    <>
+      <ResponsiveModal
+        open={open}
+        onOpenChange={onOpenChange}
+        title={`Stage ${cfg.label}`}
+      >
+          {/* En-tête */}
+          <div className="px-6 pt-6 pb-4 border-b border-slate-100">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <span
+                  className="inline-block w-3 h-3 rounded-full flex-shrink-0 mt-0.5"
+                  style={{ backgroundColor: cfg.hex }}
+                />
+                <div className="min-w-0">
+                  <h2 className="text-xl font-bold text-slate-900 leading-tight">
+                    {cfg.label}
+                  </h2>
+                  <p className="text-sm text-slate-500 mt-0.5">
+                    {format(new Date(displayStage.startDate), "EEEE d MMMM yyyy", { locale: fr })}
+                    {" → "}
+                    {format(endDate, "d MMMM yyyy", { locale: fr })}
+                  </p>
+                </div>
+                <Badge className={`${cfg.badgeCls} border flex-shrink-0`}>
+                  {cfg.label}
+                </Badge>
+              </div>
+
+              {/* Actions admin */}
+              {role === "ADMIN" && (
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {!isEditing ? (
                     <>
                       {hasActivePromotion ? (
                         <Button
                           variant="outline"
                           size="sm"
-                          className="text-orange-600 hover:text-orange-700 gap-1"
+                          className="text-orange-600 hover:text-orange-700 gap-1 text-xs"
                           onClick={() => setShowCancelPromotionDialog(true)}
                         >
-                          <XCircleIcon className="h-4 w-4" />
-                          <span className="text-xs">Annuler promo</span>
+                          <XCircleIcon className="h-3.5 w-3.5" />
+                          Annuler promo
                         </Button>
                       ) : (
                         <Button
                           variant="outline"
                           size="sm"
-                          className="text-green-600 hover:text-green-700 gap-1"
+                          className="text-green-600 hover:text-green-700 gap-1 text-xs"
                           onClick={() => setShowPromotionDialog(true)}
                         >
-                          <TagIcon className="h-4 w-4" />
-                          <span className="text-xs">Promo</span>
+                          <TagIcon className="h-3.5 w-3.5" />
+                          Promo
                         </Button>
                       )}
                       <Button variant="outline" size="sm" onClick={handleEdit}>
-                        <EditIcon className="h-4 w-4" />
+                        <EditIcon className="h-3.5 w-3.5" />
                       </Button>
                       <Button
                         variant="outline"
@@ -298,336 +298,333 @@ export function StageDetailsSheet({
                         className="text-red-600 hover:text-red-700"
                         onClick={() => setShowDeleteDialog(true)}
                       >
-                        <TrashIcon className="h-4 w-4" />
+                        <TrashIcon className="h-3.5 w-3.5" />
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSave}
+                        disabled={updateStage.isPending}
+                        className="text-green-600 hover:text-green-700 gap-1 text-xs"
+                      >
+                        <SaveIcon2 className="h-3.5 w-3.5" />
+                        Sauvegarder
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={handleCancelEdit}>
+                        <XIcon className="h-3.5 w-3.5" />
                       </Button>
                     </>
                   )}
-                </>
-              ) : (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSave}
-                    disabled={updateStage.isPending}
-                  >
-                    <SaveIcon2 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCancelEdit}
-                  >
-                    <XIcon className="h-4 w-4" />
-                  </Button>
-                </>
+                </div>
               )}
             </div>
-          </SheetTitle>
-        </SheetHeader>
+          </div>
 
-        <div className="mt-6 space-y-6">
-          {/* Informations du stage */}
-          <div className="space-y-4">
-            <div>
-              <h3 className="font-semibold mb-3">Informations générales</h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="font-medium text-muted-foreground">
-                    Date de début:
-                  </span>
-                  <span>
-                    {format(new Date(displayStage.startDate), "EEEE d MMMM yyyy", {
-                      locale: fr,
-                    })}
-                  </span>
+          <div className="px-6 py-5 space-y-6">
+            {/* Grille infos principales */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Carte Dates */}
+              <div className="bg-slate-50 rounded-xl p-4 space-y-2">
+                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Dates
+                </h3>
+                <div className="space-y-1.5 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Début</span>
+                    <span className="font-medium text-slate-800">
+                      {format(new Date(displayStage.startDate), "dd/MM/yyyy", { locale: fr })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Fin</span>
+                    <span className="font-medium text-slate-800">
+                      {format(endDate, "dd/MM/yyyy", { locale: fr })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Durée</span>
+                    <span className="font-medium text-slate-800">
+                      {displayStage.duration} jour{displayStage.duration > 1 ? "s" : ""}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="font-medium text-muted-foreground">
-                    Durée:
-                  </span>
-                  <span>{displayStage.duration} jours</span>
-                </div>
+              </div>
 
-                {/* Prix - Editable */}
-                <div className="flex justify-between items-center">
-                  <span className="font-medium text-muted-foreground">
-                    Prix:
-                  </span>
-                  {isEditing && editedStage ? (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        value={editedStage.price}
-                        onChange={(e) => {
-                          const price = parseFloat(e.target.value) || 0;
-                          // recalcul automatique de l'acompte à 2/5 du prix (40%), arrondi à 2 décimales
-                          const acompte = Math.round(price * 0.4 * 100) / 100;
-                          setEditedStage({
-                            ...editedStage,
-                            price,
-                            acomptePrice: acompte,
-                          });
+              {/* Carte Places */}
+              <div className="bg-slate-50 rounded-xl p-4 space-y-2">
+                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Places
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Total</span>
+                    {isEditing && editedStage ? (
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDecreasePlaces}
+                          disabled={editedStage.places <= currentBookingsCount}
+                          className="h-7 w-7 p-0"
+                        >
+                          <MinusIcon className="h-3.5 w-3.5" />
+                        </Button>
+                        <span className="w-7 text-center font-semibold">{editedStage.places}</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleIncreasePlaces}
+                          className="h-7 w-7 p-0"
+                        >
+                          <PlusIcon className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="font-medium text-slate-800">{currentPlaces}</span>
+                    )}
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Réservées</span>
+                    <span className="font-medium text-slate-800">{currentBookingsCount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Restantes</span>
+                    <span
+                      className={`font-semibold ${
+                        currentRestantes > 0 ? "text-green-600" : "text-red-600"
+                      }`}
+                    >
+                      {currentRestantes}
+                    </span>
+                  </div>
+                  {/* Barre de progression */}
+                  <div className="pt-1">
+                    <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${Math.min(100, (currentBookingsCount / currentPlaces) * 100)}%`,
+                          backgroundColor: currentRestantes <= 2 ? "#dc2626" : cfg.hex,
                         }}
-                        className="w-20 h-8"
-                        min="0"
-                        step="0.01"
                       />
-                      <span>€</span>
                     </div>
-                  ) : hasActivePromotion ? (
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-red-600">{displayStage.price}€</span>
-                      <span className="line-through text-muted-foreground text-xs">
+                  </div>
+                </div>
+              </div>
+
+              {/* Carte Prix */}
+              <div className="bg-slate-50 rounded-xl p-4 space-y-2">
+                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Tarifs
+                </h3>
+                <div className="space-y-1.5 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Prix total</span>
+                    {isEditing && editedStage ? (
+                      <div className="flex items-center gap-1.5">
+                        <Input
+                          type="number"
+                          value={editedStage.price}
+                          onChange={(e) => {
+                            const price = parseFloat(e.target.value) || 0;
+                            const acompte = Math.round(price * 0.4 * 100) / 100;
+                            setEditedStage({ ...editedStage, price, acomptePrice: acompte });
+                          }}
+                          className="w-20 h-7 text-right"
+                          min="0"
+                          step="0.01"
+                        />
+                        <span className="text-slate-500">€</span>
+                      </div>
+                    ) : hasActivePromotion ? (
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-red-600">{displayStage.price}€</span>
+                        <span className="line-through text-slate-400 text-xs">
+                          {(displayStage as any).promotionOriginalPrice}€
+                        </span>
+                        <Badge className="bg-red-100 text-red-700 text-[10px] px-1 py-0">
+                          -{discountPct}%
+                        </Badge>
+                      </div>
+                    ) : (
+                      <span className="font-semibold text-slate-800">{displayStage.price}€</span>
+                    )}
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Acompte (40%)</span>
+                    {isEditing && editedStage ? (
+                      <div className="flex items-center gap-1.5">
+                        <Input
+                          type="number"
+                          value={editedStage.acomptePrice}
+                          onChange={(e) =>
+                            setEditedStage({
+                              ...editedStage,
+                              acomptePrice: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                          className="w-20 h-7 text-right"
+                          min="0"
+                          step="0.01"
+                        />
+                        <span className="text-slate-500">€</span>
+                      </div>
+                    ) : (
+                      <span className="font-medium text-slate-800">{displayStage.acomptePrice}€</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Carte Promotion (si active) */}
+              {hasActivePromotion && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-2">
+                  <h3 className="text-xs font-semibold text-red-500 uppercase tracking-wide flex items-center gap-1.5">
+                    <TagIcon className="h-3.5 w-3.5" />
+                    Promotion active
+                  </h3>
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-red-400">Prix original</span>
+                      <span className="font-medium text-slate-700 line-through">
                         {(displayStage as any).promotionOriginalPrice}€
                       </span>
-                      <Badge className="bg-red-100 text-red-700 text-xs">Promo</Badge>
                     </div>
-                  ) : (
-                    <span className="font-semibold">{displayStage.price}€</span>
-                  )}
-                </div>
-
-                {/* Prix de l'acompte - Editable */}
-                <div className="flex justify-between items-center">
-                  <span className="font-medium text-muted-foreground">
-                    Prix de l&apos;acompte (20% du prix total):
-                  </span>
-                  {isEditing && editedStage ? (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        value={editedStage.acomptePrice}
-                        onChange={(e) =>
-                          setEditedStage({
-                            ...editedStage,
-                            acomptePrice: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        className="w-20 h-8"
-                        min="0"
-                        step="0.01"
-                      />
-                      <span>€</span>
-                    </div>
-                  ) : (
-                    <span className="font-semibold">{displayStage.acomptePrice}€</span>
-                  )}
-                </div>
-
-                {/* Informations promotion active */}
-                {hasActivePromotion && (
-                  <div className="bg-red-50 border border-red-200 rounded-md p-3 space-y-1">
-                    <div className="flex items-center gap-2 text-red-700 font-medium text-xs">
-                      <TagIcon className="h-3 w-3" />
-                      Promotion active
+                    <div className="flex justify-between">
+                      <span className="text-red-400">Réduction</span>
+                      <span className="font-bold text-red-600">-{discountPct}%</span>
                     </div>
                     {(displayStage as any).promotionEndDate && (
-                      <div className="text-xs text-red-600">
-                        Expire le{" "}
-                        {format(
-                          new Date((displayStage as any).promotionEndDate),
-                          "dd MMMM yyyy",
-                          { locale: fr },
-                        )}
+                      <div className="flex justify-between">
+                        <span className="text-red-400">Expire le</span>
+                        <span className="font-medium text-slate-700">
+                          {format(
+                            new Date((displayStage as any).promotionEndDate),
+                            "dd/MM/yyyy",
+                            { locale: fr }
+                          )}
+                        </span>
                       </div>
                     )}
                     {(displayStage as any).promotionReason && (
-                      <div className="text-xs text-muted-foreground italic">
+                      <p className="text-xs text-red-500 italic mt-1">
                         &ldquo;{(displayStage as any).promotionReason}&rdquo;
-                      </div>
+                      </p>
                     )}
                   </div>
-                )}
-
-                {/* Places - Editable avec boutons +/- */}
-                <div className="flex justify-between items-center"></div>
-                <span className="font-medium text-muted-foreground">
-                  Places totales:
-                </span>
-                {isEditing && editedStage ? (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleDecreasePlaces}
-                      disabled={editedStage.places <= currentBookingsCount}
-                      className="h-8 w-8 p-0"
-                    >
-                      <MinusIcon className="h-4 w-4" />
-                    </Button>
-                    <span className="w-8 text-center">
-                      {editedStage.places}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleIncreasePlaces}
-                      className="h-8 w-8 p-0"
-                    >
-                      <PlusIcon className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <span>{displayStage.places}</span>
-                )}
-              </div>
-
-              <div className="flex justify-between">
-                <span className="font-medium text-muted-foreground">
-                  Places restantes:
-                </span>
-                <span
-                  className={`font-semibold ${
-                    placesRestantes > 0 ? "text-green-600" : "text-red-600"
-                  }`}
-                >
-                  {isEditing && editedStage
-                    ? editedStage.places - currentBookingsCount
-                    : placesRestantes}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Moniteurs - Editable */}
-          <div>
-            <h3 className="font-semibold mb-3">
-              Moniteur{displayStage.moniteurs.length > 1 ? "s" : ""}
-            </h3>
-            {isEditing && editedStage ? (
-              <div className="space-y-2">
-                <Label htmlFor="moniteurs">Sélectionner des moniteurs</Label>
-                <MultiSelect
-                  options={
-                    moniteurs?.map((moniteur) => ({
-                      value: moniteur.id,
-                      label: `${moniteur.name} (${
-                        moniteur.role === "ADMIN" ? "Admin" : "Moniteur"
-                      })`,
-                    })) || []
-                  }
-                  onValueChange={(values) =>
-                    setEditedStage({
-                      ...editedStage,
-                      moniteurIds: values,
-                    })
-                  }
-                  defaultValue={editedStage.moniteurIds}
-                  placeholder="Sélectionner des moniteurs"
-                  variant="inverted"
-                  maxCount={3}
-                />
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {displayStage.moniteurs.map((moniteurData: any, index: number) => (
-                  <div
-                    key={moniteurData.moniteur.id}
-                    className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg"
-                  >
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage
-                        src={moniteurData.moniteur.avatarUrl ?? undefined}
-                        alt={moniteurData.moniteur.name}
-                      />
-                      <AvatarFallback className="text-sm">
-                        {moniteurData.moniteur.name
-                          .split(" ")
-                          .map((n: string) => n[0])
-                          .join("")
-                          .toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="font-medium">
-                        {moniteurData.moniteur.name}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {moniteurData.moniteur.role === "ADMIN"
-                          ? "Administrateur"
-                          : "Moniteur"}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <Separator />
-
-        {/* Réservations */}
-        <div>
-          <h3 className="font-semibold mb-3">
-            Réservations ({currentBookingsCount}/
-            {isEditing && editedStage
-              ? editedStage.places
-              : displayStage.places}
-            )
-          </h3>
-          {isLoadingDetails ? (
-            <div className="text-sm text-muted-foreground">
-              Chargement des réservations...
-            </div>
-          ) : bookings.length > 0 ? (
-            <div className="space-y-3">
-              {bookings.map((booking: any) => (
-                <div
-                  key={booking.id}
-                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                >
-                  <div>
-                    <div className="font-medium">
-                      {booking.stagiaire?.firstName}{" "}
-                      {booking.stagiaire?.lastName}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {booking.stagiaire?.email}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {booking.stagiaire?.phone}
-                    </div>
-                  </div>
-                  <Badge variant="outline">{booking.type}</Badge>
                 </div>
-              ))}
+              )}
             </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>Aucune réservation pour ce stage</p>
-              <p className="text-sm mt-1">
-                Les clients pourront bientôt réserver ce stage
-              </p>
-            </div>
-          )}
-        </div>
-      </SheetContent>
 
-      {/* Delete Confirmation Dialog */}
+            <Separator />
+
+            {/* Moniteurs */}
+            <div>
+              <h3 className="text-sm font-semibold text-slate-800 mb-3">
+                Moniteur{displayStage.moniteurs.length > 1 ? "s" : ""}
+              </h3>
+              {isEditing && editedStage ? (
+                <div className="space-y-2">
+                  <Label htmlFor="moniteurs" className="text-sm">Sélectionner des moniteurs</Label>
+                  <MultiSelect
+                    options={
+                      moniteurs?.map((m) => ({
+                        value: m.id,
+                        label: `${m.name} (${m.role === "ADMIN" ? "Admin" : "Moniteur"})`,
+                      })) || []
+                    }
+                    onValueChange={(values) =>
+                      setEditedStage({ ...editedStage, moniteurIds: values })
+                    }
+                    defaultValue={editedStage.moniteurIds}
+                    placeholder="Sélectionner des moniteurs"
+                    variant="inverted"
+                    maxCount={3}
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-3">
+                  {displayStage.moniteurs.map((md: any) => (
+                    <div
+                      key={md.moniteur.id}
+                      className="flex items-center gap-2.5 bg-slate-50 rounded-lg px-3 py-2"
+                    >
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={md.moniteur.avatarUrl ?? undefined} alt={md.moniteur.name} />
+                        <AvatarFallback className="text-xs">
+                          {md.moniteur.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="text-sm font-medium text-slate-800">{md.moniteur.name}</div>
+                        <div className="text-xs text-slate-500">
+                          {md.moniteur.role === "ADMIN" ? "Administrateur" : "Moniteur"}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* Réservations */}
+            <div>
+              <h3 className="text-sm font-semibold text-slate-800 mb-3">
+                Réservations ({currentBookingsCount} / {currentPlaces})
+              </h3>
+              {isLoadingDetails ? (
+                <p className="text-sm text-slate-400">Chargement des réservations…</p>
+              ) : bookings.length > 0 ? (
+                <div className="space-y-2">
+                  {bookings.map((booking: any) => (
+                    <div
+                      key={booking.id}
+                      className="flex items-center justify-between bg-slate-50 rounded-lg px-4 py-3"
+                    >
+                      <div>
+                        <div className="text-sm font-medium text-slate-800">
+                          {booking.stagiaire?.firstName} {booking.stagiaire?.lastName}
+                        </div>
+                        <div className="text-xs text-slate-500">{booking.stagiaire?.email}</div>
+                        <div className="text-xs text-slate-400">{booking.stagiaire?.phone}</div>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        {booking.type}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-slate-400">
+                  <p className="text-sm">Aucune réservation pour ce stage</p>
+                  <p className="text-xs mt-1">Les clients pourront bientôt réserver ce stage</p>
+                </div>
+              )}
+            </div>
+          </div>
+      </ResponsiveModal>
+
+      {/* Confirmation suppression */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Supprimer le stage</DialogTitle>
             <DialogDescription>
-              Êtes-vous sûr de vouloir supprimer ce stage ? Cette action est
-              irréversible.
+              Êtes-vous sûr de vouloir supprimer ce stage ? Cette action est irréversible.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteDialog(false)}
-            >
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
               Annuler
             </Button>
             <Button
               variant="destructive"
-              onClick={() => {
-                handleDelete();
-                setShowDeleteDialog(false);
-              }}
+              onClick={() => { handleDelete(); setShowDeleteDialog(false); }}
               disabled={deleteStage.isPending}
             >
               Supprimer
@@ -636,14 +633,13 @@ export function StageDetailsSheet({
         </DialogContent>
       </Dialog>
 
-      {/* Apply Promotion Dialog */}
+      {/* Appliquer une promotion */}
       <Dialog open={showPromotionDialog} onOpenChange={setShowPromotionDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Appliquer une promotion</DialogTitle>
             <DialogDescription>
-              Prix actuel : <strong>{displayStage.price}€</strong>. Définissez
-              le nouveau prix promotionnel.
+              Prix actuel : <strong>{displayStage.price}€</strong>. Définissez le nouveau prix promotionnel.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -654,9 +650,7 @@ export function StageDetailsSheet({
                 type="number"
                 placeholder={`Ex: ${Math.round(displayStage.price * 0.9)}`}
                 value={promotionForm.newPrice}
-                onChange={(e) =>
-                  setPromotionForm({ ...promotionForm, newPrice: e.target.value })
-                }
+                onChange={(e) => setPromotionForm({ ...promotionForm, newPrice: e.target.value })}
                 min="1"
                 step="1"
               />
@@ -667,9 +661,7 @@ export function StageDetailsSheet({
                 id="promo-end"
                 type="date"
                 value={promotionForm.endDate}
-                onChange={(e) =>
-                  setPromotionForm({ ...promotionForm, endDate: e.target.value })
-                }
+                onChange={(e) => setPromotionForm({ ...promotionForm, endDate: e.target.value })}
               />
             </div>
             <div className="space-y-1">
@@ -679,9 +671,7 @@ export function StageDetailsSheet({
                 type="text"
                 placeholder="Ex: Promo printemps"
                 value={promotionForm.reason}
-                onChange={(e) =>
-                  setPromotionForm({ ...promotionForm, reason: e.target.value })
-                }
+                onChange={(e) => setPromotionForm({ ...promotionForm, reason: e.target.value })}
               />
             </div>
           </div>
@@ -705,25 +695,17 @@ export function StageDetailsSheet({
         </DialogContent>
       </Dialog>
 
-      {/* Cancel Promotion Confirmation Dialog */}
-      <Dialog
-        open={showCancelPromotionDialog}
-        onOpenChange={setShowCancelPromotionDialog}
-      >
+      {/* Annuler la promotion */}
+      <Dialog open={showCancelPromotionDialog} onOpenChange={setShowCancelPromotionDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Annuler la promotion</DialogTitle>
             <DialogDescription>
-              Le prix reviendra à{" "}
-              <strong>{(displayStage as any).promotionOriginalPrice}€</strong>.
-              Êtes-vous sûr ?
+              Le prix reviendra à <strong>{(displayStage as any).promotionOriginalPrice}€</strong>. Êtes-vous sûr ?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowCancelPromotionDialog(false)}
-            >
+            <Button variant="outline" onClick={() => setShowCancelPromotionDialog(false)}>
               Annuler
             </Button>
             <Button
@@ -736,6 +718,6 @@ export function StageDetailsSheet({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Sheet>
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import BlogRelativeArticles from "@/components/blog/blog-relative-article";
 import ContactSection from "@/components/sections/ContactSection";
-import DesirSection from "@/components/sections/DesirSection";
+import dynamic from "next/dynamic";
+const DesirSection = dynamic(() => import("@/components/sections/DesirSection"), { ssr: false });
 import FAQSection from "@/components/sections/FAQSection";
 import HeroLanding from "@/components/sections/HeroLanding";
 import InterestSection from "@/components/sections/InterestSection";

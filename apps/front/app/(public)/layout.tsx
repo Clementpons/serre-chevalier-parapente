@@ -13,7 +13,7 @@ import { LucideMenu } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { CartSidebar } from "@/components/cart/CartSidebar";
+import { CartDropdown } from "@/components/cart/CartDropdown";
 import TopBar from "@/components/layout/TopBar";
 declare const window: any;
 
@@ -56,12 +56,11 @@ export default function PublicLayout({
             priority
           />
         </Link>
-        {/* Panier */}
+        {/* Panier + Menu */}
         <div
-          className={`z-[70] transition-all duration-300 ${isScrolled ? "fixed right-16 top-2" : "fixed right-20 top-[6vh]"}`}
+          className={`z-[70] fixed flex items-center gap-1 transition-all duration-300 ${isScrolled ? "right-3 top-3" : "right-4 top-[6vh]"}`}
         >
-          <CartSidebar isScrolled={isScrolled} />
-        </div>
+          <CartDropdown />
 
         <DropdownMenu open={isMenuOpened} onOpenChange={setIsMenuOpened}>
           <DropdownMenuTrigger asChild>
@@ -69,9 +68,7 @@ export default function PublicLayout({
               variant={"outline"}
               size={"icon"}
               title="Ouvrir le menu de navigation"
-              className={`m-2 p-0.5 2xl:p-1 z-[70] transition-all duration-300 rounded-full
-        ${isScrolled ? "fixed right-2 top-2" : "fixed right-4 top-[6vh]"}
-        `}
+              className="rounded-full"
             >
               <LucideMenu className="size-4" />
             </Button>
@@ -136,6 +133,7 @@ export default function PublicLayout({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
         <TopBar />
         <div
           className={cn(

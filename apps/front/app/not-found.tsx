@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Home, Mountain, Plane } from "lucide-react";
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { CartSidebar } from "@/components/cart/CartSidebar";
+import { CartDropdown } from "@/components/cart/CartDropdown";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,12 +52,11 @@ export default function NotFound() {
             priority
           />
         </Link>
-        {/* Panier */}
+        {/* Panier + Menu */}
         <div
-          className={`z-[70] transition-all duration-300 ${isScrolled ? "fixed right-16 top-2" : "fixed right-20 top-[6vh]"}`}
+          className={`z-[70] fixed flex items-center gap-1 transition-all duration-300 ${isScrolled ? "right-2 top-2" : "right-4 top-[6vh]"}`}
         >
-          <CartSidebar isScrolled={isScrolled} />
-        </div>
+          <CartDropdown />
 
         <DropdownMenu open={isMenuOpened} onOpenChange={setIsMenuOpened}>
           <DropdownMenuTrigger asChild>
@@ -65,9 +64,7 @@ export default function NotFound() {
               variant={"outline"}
               size={"icon"}
               title="Ouvrir le menu de navigation"
-              className={`m-2 p-0.5 2xl:p-1 z-[70] transition-all duration-300 rounded-full
-        ${isScrolled ? "fixed right-2 top-2" : "fixed right-4 top-[6vh]"}
-        `}
+              className="rounded-full"
             >
               <LucideMenu className="size-4" />
             </Button>
@@ -122,6 +119,7 @@ export default function NotFound() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
         <Link
           href={"/#pricing"}
           title="Profitez de l'offre promo dès maintenant !"
