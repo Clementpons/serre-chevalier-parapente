@@ -10,7 +10,7 @@ import {
 } from "../schemas";
 import { z } from "zod";
 import { revalidateTag } from "next/cache";
-import { Prisma } from "@prisma/client";
+import { Prisma, StageType } from "@prisma/client";
 
 const app = new Hono()
   // GET /stages — list all stages
@@ -22,7 +22,7 @@ const app = new Hono()
     const types = c.req.query("types");
 
     const where: Prisma.StageWhereInput = {};
-    if (moniteurId) where.moniteurId = moniteurId;
+    if (moniteurId) where.moniteurs = { some: { moniteurId } };
 
     // Single-date filter (legacy) vs date-range filter
     if (date) {
@@ -40,7 +40,7 @@ const app = new Hono()
     // Type filter (comma-separated: "INITIATION,PROGRESSION,DOUBLE")
     if (types) {
       const typeList = types.split(",").map((t) => t.trim()).filter(Boolean);
-      if (typeList.length > 0) where.type = { in: typeList };
+      if (typeList.length > 0) where.type = { in: typeList as StageType[] };
     }
 
     try {
