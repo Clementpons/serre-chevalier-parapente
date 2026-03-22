@@ -4,6 +4,8 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import Script from "next/script";
 import CookieConsentBanner from "@/components/cookie-consent/CookieConsentBanner";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const manrope = Manrope({ subsets: ["latin"], display: "swap" });
 
@@ -70,6 +72,8 @@ export default async function RootLayout({
         {children}
         <CookieConsentBanner />
         <Toaster />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
