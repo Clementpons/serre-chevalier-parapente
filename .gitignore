@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Next.js
+.next/
+out/
+dist/
+
+# Environment variables — NEVER commit real values
+.env
+.env.local
+.env.*.local
+# Allow example templates
+!.env.example
+
+# Turbo
+.turbo/
+
+# Build outputs
+build/
+
+# Logs
+*.log
+*.txt
+npm-debug.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Vercel
+.vercel
+
+# Claude Code internal memory (not project code)
+.claude/
