@@ -10,16 +10,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import {
   CheckCircleIcon,
   LoaderIcon,
   SearchIcon,
   SendIcon,
+  RefreshIcon,
 } from "@/lib/icons";
-import { useResolveCampaign } from "@/features/campaigns/api/use-resolve-campaign";
-import { useGetCampaignById } from "@/features/campaigns/api/use-get-campaign";
+import {
+  useContactsStatus,
+  type ContactWithStatus,
+} from "@/features/campaigns/api/use-contacts-status";
 import { useSendContacts } from "@/features/campaigns/api/use-send-contacts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -30,7 +32,7 @@ interface CampaignSendDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type Filter = "all" | "pending" | "sent";
+type Filter = "all" | "pending" | "sent" | "failed";
 
 export function CampaignSendDialog({
   campaign,
@@ -40,55 +42,40 @@ export function CampaignSendDialog({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<Filter>("pending");
   const [search, setSearch] = useState("");
-  // Suivi local des envois dans cette session (pour UI instantanée)
+  const [sendingPhones, setSendingPhones] = useState<Set<string>>(new Set());
+  // Optimistic local state pour feedback immédiat
   const [localSent, setLocalSent] = useState<Set<string>>(new Set());
   const [localFailed, setLocalFailed] = useState<Set<string>>(new Set());
-  const [sendingPhones, setSendingPhones] = useState<Set<string>>(new Set());
 
   const queryClient = useQueryClient();
-
-  const { data: resolvedData, isLoading: isLoadingContacts } = useResolveCampaign(
-    campaign?.id ?? "",
-    open,
-  );
-
-  const { data: campaignDetail, isLoading: isLoadingLogs } = useGetCampaignById(
-    campaign?.id ?? "",
-  );
-
+  const { data, isLoading, refetch } = useContactsStatus(campaign?.id ?? "", open);
   const sendContacts = useSendContacts(campaign?.id ?? "");
 
-  // Index des numéros déjà envoyés (depuis les logs en base)
-  const dbSentPhones = useMemo<Set<string>>(() => {
-    const logs: any[] = campaignDetail?.logs ?? [];
-    return new Set(
-      logs.filter((l) => l.status === "SENT" || l.status === "DELIVERED").map((l) => l.recipientPhone),
-    );
-  }, [campaignDetail?.logs]);
+  const allContacts: ContactWithStatus[] = data?.contacts ?? [];
 
-  const isSent = (phone: string) => dbSentPhones.has(phone) || localSent.has(phone);
-  const isFailed = (phone: string) => localFailed.has(phone);
+  const isSent = (c: ContactWithStatus) => c.sent || localSent.has(c.phone);
+  const isFailed = (c: ContactWithStatus) => (c.failed && !c.sent) || localFailed.has(c.phone);
   const isSending = (phone: string) => sendingPhones.has(phone);
 
-  const allContacts: { name: string; phone: string }[] = resolvedData?.contacts ?? [];
+  const sentCount = allContacts.filter(isSent).length;
+  const failedCount = allContacts.filter((c) => isFailed(c)).length;
+  const pendingCount = allContacts.length - sentCount - failedCount;
 
   const filteredContacts = useMemo(() => {
-    const sent = (phone: string) => dbSentPhones.has(phone) || localSent.has(phone);
     let list = allContacts;
-    if (filter === "pending") list = list.filter((c) => !sent(c.phone));
-    if (filter === "sent") list = list.filter((c) => sent(c.phone));
+    if (filter === "pending") list = list.filter((c) => !c.sent && !localSent.has(c.phone) && !c.failed && !localFailed.has(c.phone));
+    if (filter === "sent") list = list.filter((c) => c.sent || localSent.has(c.phone));
+    if (filter === "failed") list = list.filter((c) => (c.failed || localFailed.has(c.phone)) && !c.sent && !localSent.has(c.phone));
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
-        (c) =>
-          c.name?.toLowerCase().includes(q) || c.phone.includes(q),
+        (c) => c.name?.toLowerCase().includes(q) || c.phone.includes(q),
       );
     }
     return list;
-  }, [allContacts, filter, search, localSent, dbSentPhones]);
+  }, [allContacts, filter, search, localSent]);
 
-  const sentCount = allContacts.filter((c) => isSent(c.phone)).length;
-  const pendingCount = allContacts.length - sentCount;
+  const pendingVisible = filteredContacts.filter((c) => !isSent(c));
 
   const toggleSelect = (phone: string) => {
     setSelected((prev) => {
@@ -103,7 +90,6 @@ export function CampaignSendDialog({
   };
 
   const toggleSelectAll = () => {
-    const pendingVisible = filteredContacts.filter((c) => !isSent(c.phone));
     if (selected.size === pendingVisible.length && pendingVisible.length > 0) {
       setSelected(new Set());
     } else {
@@ -113,7 +99,6 @@ export function CampaignSendDialog({
 
   const handleSend = async (phones: string[]) => {
     if (phones.length === 0) return;
-
     setSendingPhones((prev) => new Set([...prev, ...phones]));
     setSelected(new Set());
 
@@ -122,7 +107,6 @@ export function CampaignSendDialog({
 
       const newSent = new Set(localSent);
       const newFailed = new Set(localFailed);
-
       results.forEach((r) => {
         if (r.success) {
           newSent.add(r.phone);
@@ -131,17 +115,18 @@ export function CampaignSendDialog({
           newFailed.add(r.phone);
         }
       });
-
       setLocalSent(newSent);
       setLocalFailed(newFailed);
 
       const successCount = results.filter((r) => r.success).length;
       const failCount = results.filter((r) => !r.success && r.error !== "Déjà envoyé").length;
-
       if (successCount > 0)
         toast.success(`${successCount} SMS envoyé${successCount > 1 ? "s" : ""} avec succès`);
       if (failCount > 0)
         toast.error(`${failCount} envoi${failCount > 1 ? "s" : ""} échoué${failCount > 1 ? "s" : ""}`);
+
+      // Rafraîchir les données depuis le serveur
+      await refetch();
     } catch {
       // handled by hook
     } finally {
@@ -153,7 +138,6 @@ export function CampaignSendDialog({
     }
   };
 
-  // Marquer la campagne comme terminée
   const markComplete = useMutation({
     mutationFn: async () => {
       const res = await fetch(`/api/campaigns/${campaign?.id}`, {
@@ -171,59 +155,74 @@ export function CampaignSendDialog({
     onError: () => toast.error("Impossible de marquer comme terminée"),
   });
 
-  const isLoading = isLoadingContacts || isLoadingLogs;
-  const pendingVisible = filteredContacts.filter((c) => !isSent(c.phone));
   const allPendingSelected =
     pendingVisible.length > 0 && selected.size === pendingVisible.length;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col gap-0 p-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle className="text-lg">
-            Envoi de la campagne — {campaign?.name}
-          </DialogTitle>
+      <DialogContent className="max-w-3xl w-full flex flex-col" style={{ maxHeight: "90vh", padding: 0 }}>
+
+        {/* Header */}
+        <div className="px-6 pt-6 pb-4 border-b shrink-0">
+          <DialogHeader>
+            <DialogTitle className="text-lg">
+              Envoi — {campaign?.name}
+            </DialogTitle>
+          </DialogHeader>
           {!isLoading && (
             <div className="flex items-center gap-3 mt-2 flex-wrap">
               <span className="text-sm text-muted-foreground">
                 <strong>{allContacts.length}</strong> contacts au total
               </span>
-              <Badge variant="secondary" className="text-green-700 bg-green-50 border-green-200">
+              <Badge className="text-green-700 bg-green-50 border border-green-200 shadow-none">
                 {sentCount} envoyés
               </Badge>
               <Badge variant="outline">
                 {pendingCount} restants
               </Badge>
+              {failedCount > 0 && (
+                <Badge variant="destructive" className="cursor-pointer" onClick={() => setFilter("failed")}>
+                  {failedCount} échec{failedCount > 1 ? "s" : ""}
+                </Badge>
+              )}
+              <Button variant="ghost" size="sm" className="h-6 px-2 ml-auto" onClick={() => refetch()}>
+                <RefreshIcon className="h-3.5 w-3.5" />
+              </Button>
             </div>
           )}
-        </DialogHeader>
+        </div>
 
         {/* Filtres + recherche */}
-        <div className="flex items-center gap-2 px-6 py-3 border-b flex-wrap">
-          {(["all", "pending", "sent"] as Filter[]).map((f) => (
+        <div className="flex items-center gap-2 px-6 py-3 border-b shrink-0 flex-wrap">
+          {([
+            { key: "all", label: `Tous (${allContacts.length})` },
+            { key: "pending", label: `À envoyer (${pendingCount})` },
+            { key: "sent", label: `Envoyés (${sentCount})` },
+            ...(failedCount > 0 ? [{ key: "failed", label: `Échecs (${failedCount})` }] : []),
+          ] as { key: Filter; label: string }[]).map(({ key, label }) => (
             <Button
-              key={f}
-              variant={filter === f ? "default" : "outline"}
+              key={key}
+              variant={filter === key ? "default" : key === "failed" ? "outline" : "outline"}
               size="sm"
-              className="h-7 text-xs"
-              onClick={() => setFilter(f)}
+              className={`h-7 text-xs ${key === "failed" ? "border-destructive text-destructive hover:bg-destructive hover:text-white" : ""} ${filter === key && key === "failed" ? "bg-destructive text-white" : ""}`}
+              onClick={() => setFilter(key)}
             >
-              {f === "all" ? "Tous" : f === "pending" ? "À envoyer" : "Déjà envoyés"}
+              {label}
             </Button>
           ))}
           <div className="relative ml-auto">
             <SearchIcon className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
               placeholder="Rechercher..."
-              className="h-7 pl-7 text-xs w-48"
+              className="h-7 pl-7 text-xs w-44"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
         </div>
 
-        {/* Table */}
-        <ScrollArea className="flex-1 min-h-0">
+        {/* Table scrollable */}
+        <div className="overflow-y-auto flex-1 min-h-0">
           {isLoading ? (
             <div className="flex h-48 items-center justify-center">
               <LoaderIcon className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -234,60 +233,68 @@ export function CampaignSendDialog({
             </div>
           ) : (
             <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-muted/60 backdrop-blur-sm z-10">
-                <tr className="border-b">
-                  <th className="px-4 py-2 text-left w-10">
+              <thead className="sticky top-0 bg-background border-b z-10">
+                <tr>
+                  <th className="px-4 py-2.5 text-left w-10">
                     <Checkbox
                       checked={allPendingSelected}
                       onCheckedChange={toggleSelectAll}
                       disabled={pendingVisible.length === 0}
                     />
                   </th>
-                  <th className="px-4 py-2 text-left font-medium text-muted-foreground">Nom</th>
-                  <th className="px-4 py-2 text-left font-medium text-muted-foreground">Téléphone</th>
-                  <th className="px-4 py-2 text-center font-medium text-muted-foreground">Statut</th>
-                  <th className="px-4 py-2 text-right font-medium text-muted-foreground">Action</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Nom</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Téléphone</th>
+                  <th className="px-4 py-2.5 text-center text-xs font-medium text-muted-foreground">Statut</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredContacts.map((contact) => {
-                  const sent = isSent(contact.phone);
-                  const failed = isFailed(contact.phone);
+                  const sent = isSent(contact);
+                  const failed = isFailed(contact);
                   const sending = isSending(contact.phone);
-                  const isChecked = selected.has(contact.phone);
+                  const checked = selected.has(contact.phone);
 
                   return (
                     <tr
                       key={contact.phone}
                       className={`border-b transition-colors ${
-                        sent ? "bg-green-50/50" : isChecked ? "bg-blue-50/40" : "hover:bg-muted/30"
+                        sent
+                          ? "bg-green-50/40"
+                          : checked
+                            ? "bg-blue-50/40"
+                            : "hover:bg-muted/30"
                       }`}
                     >
                       <td className="px-4 py-2.5">
                         <Checkbox
-                          checked={isChecked}
+                          checked={checked}
                           onCheckedChange={() => toggleSelect(contact.phone)}
                           disabled={sent || sending}
                         />
                       </td>
-                      <td className="px-4 py-2.5 font-medium">
-                        {contact.name || <span className="text-muted-foreground italic">Sans nom</span>}
+                      <td className="px-4 py-2.5 font-medium max-w-[160px] truncate">
+                        {contact.name || (
+                          <span className="text-muted-foreground italic text-xs">Sans nom</span>
+                        )}
                       </td>
-                      <td className="px-4 py-2.5 text-muted-foreground font-mono text-xs">
+                      <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">
                         {contact.phone}
                       </td>
                       <td className="px-4 py-2.5 text-center">
                         {sending ? (
-                          <LoaderIcon className="h-4 w-4 animate-spin text-blue-500 inline" />
+                          <LoaderIcon className="h-4 w-4 animate-spin text-blue-500 mx-auto" />
                         ) : sent ? (
                           <div className="flex items-center justify-center gap-1 text-green-600">
                             <CheckCircleIcon className="h-4 w-4" />
                             <span className="text-xs">Envoyé</span>
                           </div>
                         ) : failed ? (
-                          <Badge variant="destructive" className="text-xs">Échec</Badge>
+                          <div title={contact.error ?? undefined}>
+                            <Badge variant="destructive" className="text-xs cursor-help">Échec</Badge>
+                          </div>
                         ) : (
-                          <Badge variant="outline" className="text-xs text-muted-foreground">En attente</Badge>
+                          <span className="text-xs text-muted-foreground">En attente</span>
                         )}
                       </td>
                       <td className="px-4 py-2.5 text-right">
@@ -295,7 +302,7 @@ export function CampaignSendDialog({
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-7 text-xs px-2"
+                            className="h-7 text-xs px-2 hover:bg-blue-50 hover:text-blue-700"
                             disabled={sending || sendContacts.isPending}
                             onClick={() => handleSend([contact.phone])}
                           >
@@ -316,21 +323,34 @@ export function CampaignSendDialog({
               </tbody>
             </table>
           )}
-        </ScrollArea>
+        </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t flex items-center justify-between gap-3 flex-wrap">
-          <div className="text-sm text-muted-foreground">
-            {selected.size > 0 ? (
-              <span><strong>{selected.size}</strong> contact{selected.size > 1 ? "s" : ""} sélectionné{selected.size > 1 ? "s" : ""}</span>
-            ) : (
-              <span>Sélectionnez des contacts pour un envoi groupé</span>
-            )}
-          </div>
+        <div className="px-6 py-4 border-t shrink-0 flex items-center justify-between gap-3 flex-wrap bg-background">
+          <p className="text-sm text-muted-foreground">
+            {selected.size > 0
+              ? `${selected.size} contact${selected.size > 1 ? "s" : ""} sélectionné${selected.size > 1 ? "s" : ""}`
+              : "Sélectionnez des contacts pour un envoi groupé"}
+          </p>
           <div className="flex gap-2">
-            {pendingCount === 0 && allContacts.length > 0 && campaignDetail?.status !== "COMPLETED" && (
+            {failedCount > 0 && (
               <Button
-                variant="default"
+                size="sm"
+                variant="destructive"
+                disabled={sendContacts.isPending}
+                onClick={() => {
+                  const failedPhones = allContacts
+                    .filter((c) => (c.failed || localFailed.has(c.phone)) && !c.sent && !localSent.has(c.phone))
+                    .map((c) => c.phone);
+                  handleSend(failedPhones);
+                }}
+              >
+                <RefreshIcon className="h-4 w-4 mr-2" />
+                Renvoyer les échecs ({failedCount})
+              </Button>
+            )}
+            {pendingCount === 0 && failedCount === 0 && allContacts.length > 0 && (
+              <Button
                 size="sm"
                 onClick={() => markComplete.mutate()}
                 disabled={markComplete.isPending}
@@ -358,6 +378,7 @@ export function CampaignSendDialog({
             </Button>
           </div>
         </div>
+
       </DialogContent>
     </Dialog>
   );

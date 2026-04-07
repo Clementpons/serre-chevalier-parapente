@@ -5,7 +5,7 @@
 //   SMS_SIMULATION=true             (dev — log sans envoyer)
 
 const apiKey = process.env.BREVO_API_KEY?.trim();
-const senderName = process.env.BREVO_SENDER_NAME || "Serre Chevalier Parapente";
+const senderName = process.env.BREVO_SENDER_NAME || "SCParapente";
 
 type SendSmsOptions = {
   to: string; // Numéro formaté E.164 (ex: +33612345678)
