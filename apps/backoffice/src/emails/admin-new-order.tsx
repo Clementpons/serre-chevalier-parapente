@@ -152,7 +152,7 @@ export const AdminNewOrderEmail = ({
             <Img
               alt="Photographie de Serre Chevalier Parapente"
               style={{ width: "150px", height: "150px", margin: "0 auto" }}
-              src="https://serreche-parapente-backoffice.vercel.app/favicon/android-chrome-512x512.png"
+              src="https://www.serre-chevalier-parapente.fr/_next/image?url=%2Flogo%2Flogo-light-nobg.webp&w=96&q=75"
             />
             <Heading style={h1}>🔔 Nouvelle Commande !</Heading>
             <Text style={subtitle}>

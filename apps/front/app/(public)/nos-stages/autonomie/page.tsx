@@ -21,7 +21,6 @@ import {
   LucideUsersRound,
 } from "lucide-react";
 import Image from "next/image";
-import CTANosStages from "../cta";
 import { StagePriceBadge } from "@/components/price/StagePriceBadge";
 
 export async function generateMetadata() {
@@ -37,8 +36,6 @@ export async function generateMetadata() {
 export default function NosStagesPage() {
   return (
     <>
-      {/* CTA de réservation */}
-      <CTANosStages type="AUTONOMIE" />
       {/* Hero Header with H1 */}
       <section>
         <div className="bg-slate-900 h-[85svh] overflow-hidden relative flex items-end pb-24 md:pb-16 px-4 lg:px-36 xl:px-48">

@@ -3,6 +3,7 @@ import { OrderConfirmationEmail } from '@/emails/order-confirmation';
 import { AdminNewOrderEmail } from '@/emails/admin-new-order';
 import { GiftVoucherPurchaseEmail } from '@/emails/gift-voucher-purchase';
 import { ResetPasswordEmail } from '@/emails/reset-password';
+import { StageReminderEmail } from '@/emails/stage-reminder';
 
 if (!process.env.RESEND_API_KEY) {
   throw new Error('RESEND_API_KEY is not defined');
@@ -128,6 +129,42 @@ export async function sendPasswordResetEmail({
     react: ResetPasswordEmail({ userName, resetUrl }),
   });
   if (error) throw error;
+}
+
+interface StageReminderData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  stageType: string;
+  startDate: string;
+  daysUntilStart: 1 | 7;
+  bookingShortCode?: string | null;
+  remainingAmount?: number;
+}
+
+export async function sendStageReminderEmail(data: StageReminderData) {
+  const sender = process.env.RESEND_FROM_EMAIL || 'Serre Chevalier Parapente <noreply@serre-chevalier-parapente.fr>';
+  const subject = data.daysUntilStart === 1
+    ? `Votre stage commence demain — ${new Date(data.startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
+    : `Votre stage commence dans 7 jours — ${new Date(data.startDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`;
+
+  const { error } = await resend.emails.send({
+    from: sender,
+    to: [data.email],
+    subject,
+    react: StageReminderEmail({
+      firstName: data.firstName,
+      lastName: data.lastName,
+      stageType: data.stageType,
+      startDate: data.startDate,
+      daysUntilStart: data.daysUntilStart,
+      bookingShortCode: data.bookingShortCode,
+      remainingAmount: data.remainingAmount,
+    }),
+  });
+
+  if (error) throw error;
+  return { success: true };
 }
 
 export async function sendGiftVoucherPurchaseEmail(data: GiftVoucherEmailData) {

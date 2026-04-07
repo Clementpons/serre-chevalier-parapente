@@ -18,13 +18,13 @@ export function ReserveButton({ type, stageType, baptemeCategory, className }: R
     if (type === 'stage') {
       switch (stageType) {
         case 'INITIATION':
-          return 'Je réserve un stage initiation';
+          return 'Je réserve';
         case 'PROGRESSION':
-          return 'Je réserve un stage progression';
+          return 'Je réserve';
         case 'AUTONOMIE':
-          return 'Je réserve un stage autonomie';
+          return 'Je réserve';
         default:
-          return 'Je réserve ce stage';
+          return 'Je réserve';
       }
     }
     

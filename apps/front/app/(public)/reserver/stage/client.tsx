@@ -134,7 +134,7 @@ const MONTH_NAMES = [
   "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
 ];
 
-const DAY_NAMES = ["Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam.", "Dim."];
+const DAY_NAMES = ["Dim.", "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam."];
 
 const TYPE_CONFIG: Record<
   string,
@@ -215,10 +215,9 @@ function formatDateShort(date: Date): string {
   return date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 }
 
-/** 0 = Monday … 6 = Sunday */
-function getDOWMon(date: Date): number {
-  const d = date.getDay();
-  return d === 0 ? 6 : d - 1;
+/** 0 = Sunday … 6 = Saturday */
+function getDOWSun(date: Date): number {
+  return date.getDay();
 }
 
 function stageMatchesTypes(stage: Stage, selectedTypes: string[]): boolean {
@@ -238,8 +237,6 @@ function initTypesFromParam(param: string | null): string[] {
 // ─── Gift Voucher Banner ──────────────────────────────────────────────────────
 
 function GiftVoucherBanner() {
-  const [visible, setVisible] = useState(true);
-  if (!visible) return null;
   return (
     <div className="flex items-center gap-3 justify-between bg-cyan-50 border border-cyan-200 rounded-xl px-4 py-3">
       <div className="flex items-center gap-2 min-w-0">
@@ -257,13 +254,6 @@ function GiftVoucherBanner() {
             Utiliser
           </Button>
         </Link>
-        <button
-          onClick={() => setVisible(false)}
-          className="p-1 text-cyan-500 hover:text-cyan-800 transition-colors rounded"
-          aria-label="Fermer"
-        >
-          <X className="w-4 h-4" />
-        </button>
       </div>
     </div>
   );
@@ -281,11 +271,11 @@ function StepIndicator({ currentStep }: { currentStep: 1 | 2 }) {
         )}>
           {currentStep > 1 ? <Check className="w-4 h-4" /> : "1"}
         </div>
-        <span className={cn("text-sm font-medium", currentStep >= 1 ? "text-blue-700" : "text-slate-400")}>
+        <span className={cn("hidden sm:inline text-sm font-medium", currentStep >= 1 ? "text-blue-700" : "text-slate-400")}>
           Choisir un créneau
         </span>
       </div>
-      <div className={cn("h-0.5 w-8 mx-1 transition-colors", currentStep >= 2 ? "bg-blue-600" : "bg-slate-200")} />
+      <div className={cn("h-0.5 w-6 sm:w-8 mx-1 transition-colors", currentStep >= 2 ? "bg-blue-600" : "bg-slate-200")} />
       <div className="flex items-center gap-2">
         <div className={cn(
           "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all",
@@ -293,7 +283,7 @@ function StepIndicator({ currentStep }: { currentStep: 1 | 2 }) {
         )}>
           2
         </div>
-        <span className={cn("text-sm font-medium", currentStep >= 2 ? "text-blue-700" : "text-slate-400")}>
+        <span className={cn("hidden sm:inline text-sm font-medium", currentStep >= 2 ? "text-blue-700" : "text-slate-400")}>
           Vos informations
         </span>
       </div>
@@ -393,12 +383,14 @@ function StageCalendar({
   selectedSlot,
   onStagesAccumulated,
   onViewDateChange,
+  defaultViewDate,
 }: {
   selectedTypes: string[];
   onSlotSelect: (slot: Stage) => void;
   selectedSlot: Stage | null;
   onStagesAccumulated: (stages: Stage[]) => void;
   onViewDateChange?: (date: Date) => void;
+  defaultViewDate?: Date;
 }) {
   const today = useMemo(() => {
     const d = new Date();
@@ -409,7 +401,7 @@ function StageCalendar({
   const todayKey = getDateKey(today);
 
   const [viewDate, setViewDate] = useState<Date>(
-    () => new Date(today.getFullYear(), today.getMonth(), 1),
+    () => defaultViewDate ?? new Date(today.getFullYear(), today.getMonth(), 1),
   );
   const [dialogStage, setDialogStage] = useState<Stage | null>(null);
   const [hoveredStageId, setHoveredStageId] = useState<string | null>(null);
@@ -423,6 +415,7 @@ function StageCalendar({
 
   // Per-month stage cache: key = "YYYY-M-types"
   const stageCache = useRef<Map<string, Stage[]>>(new Map());
+  const isAutoNavigating = useRef(true);
   const [localStages, setLocalStages] = useState<Stage[]>([]);
   const [loadingStages, setLoadingStages] = useState(false);
 
@@ -469,6 +462,27 @@ function StageCalendar({
         const stages: Stage[] = data.data;
         stageCache.current.set(cacheKey, stages);
         setLocalStages(stages);
+
+        // Auto-navigate to the first month that has upcoming stages
+        if (isAutoNavigating.current) {
+          const hasUpcoming = stages.some((s) => {
+            const d = new Date(s.startDate);
+            d.setHours(0, 0, 0, 0);
+            return d >= today;
+          });
+          if (!hasUpcoming) {
+            const nextMonth = new Date(year, month + 1, 1);
+            const maxDate = new Date(today.getFullYear(), today.getMonth() + 12, 1);
+            if (nextMonth < maxDate) {
+              setViewDate(nextMonth);
+              onViewDateChange?.(nextMonth);
+            } else {
+              isAutoNavigating.current = false;
+            }
+          } else {
+            isAutoNavigating.current = false;
+          }
+        }
 
         // Bubble all cached stages up to parent for StatsSummary
         const deduped = new Map<string, Stage>();
@@ -532,8 +546,7 @@ function StageCalendar({
     const month = viewDate.getMonth();
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
-    let startDow = firstDay.getDay();
-    startDow = startDow === 0 ? 6 : startDow - 1;
+    const startDow = firstDay.getDay();
 
     const days: CalDay[] = [];
 
@@ -571,19 +584,19 @@ function StageCalendar({
     return chunks.map((weekDays) => {
       const firstActual = weekDays[0];
 
-      // Compute Monday of this week
-      const weekMonday = new Date(firstActual.date);
-      weekMonday.setDate(weekMonday.getDate() - getDOWMon(weekMonday));
-      weekMonday.setHours(0, 0, 0, 0);
-      const weekSunday = new Date(weekMonday);
-      weekSunday.setDate(weekSunday.getDate() + 6);
+      // Compute Sunday of this week (first day)
+      const weekSunday = new Date(firstActual.date);
+      weekSunday.setDate(weekSunday.getDate() - getDOWSun(weekSunday));
       weekSunday.setHours(0, 0, 0, 0);
+      const weekSaturday = new Date(weekSunday);
+      weekSaturday.setDate(weekSaturday.getDate() + 6);
+      weekSaturday.setHours(0, 0, 0, 0);
 
       // Find overlapping stages
       const overlapping = filteredStages.filter((stage) => {
         const s = new Date(stage.startDate); s.setHours(0, 0, 0, 0);
         const e = new Date(stage.startDate); e.setDate(e.getDate() + stage.duration - 1); e.setHours(0, 0, 0, 0);
-        return e >= weekMonday && s <= weekSunday;
+        return e >= weekSunday && s <= weekSaturday;
       });
 
       // Build segments
@@ -591,15 +604,15 @@ function StageCalendar({
         const stageStart = new Date(stage.startDate); stageStart.setHours(0, 0, 0, 0);
         const stageEnd = new Date(stage.startDate); stageEnd.setDate(stageEnd.getDate() + stage.duration - 1); stageEnd.setHours(0, 0, 0, 0);
 
-        const segStart = stageStart < weekMonday ? weekMonday : stageStart;
-        const segEnd   = stageEnd   > weekSunday ? weekSunday : stageEnd;
+        const segStart = stageStart < weekSunday ? weekSunday : stageStart;
+        const segEnd   = stageEnd   > weekSaturday ? weekSaturday : stageEnd;
 
         return {
           stage,
-          colStart: getDOWMon(segStart) + 1,
-          colEnd:   getDOWMon(segEnd)   + 1,
-          isContinuation: stageStart < weekMonday,
-          continuesNext:  stageEnd   > weekSunday,
+          colStart: getDOWSun(segStart) + 1,
+          colEnd:   getDOWSun(segEnd)   + 1,
+          isContinuation: stageStart < weekSunday,
+          continuesNext:  stageEnd   > weekSaturday,
         };
       });
 
@@ -656,6 +669,7 @@ function StageCalendar({
             variant="outline"
             size="sm"
             onClick={() => {
+              isAutoNavigating.current = false;
               const d = new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1);
               setViewDate(d);
               onViewDateChange?.(d);
@@ -673,6 +687,7 @@ function StageCalendar({
             variant="outline"
             size="sm"
             onClick={() => {
+              isAutoNavigating.current = false;
               const d = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1);
               setViewDate(d);
               onViewDateChange?.(d);
@@ -687,10 +702,15 @@ function StageCalendar({
 
           {/* Day-name header */}
           <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-200">
-            {DAY_NAMES.map((day) => (
+            {DAY_NAMES.map((day, i) => (
               <div
                 key={day}
-                className="text-center text-xs font-semibold text-blue-600 py-2 border-r border-slate-200 last:border-r-0"
+                className={cn(
+                  "text-center text-xs font-semibold py-2 border-r border-slate-200 last:border-r-0",
+                  i === 0
+                    ? "text-blue-800 bg-blue-100 font-bold"
+                    : "text-blue-600",
+                )}
               >
                 {day}
               </div>
@@ -702,7 +722,7 @@ function StageCalendar({
             <div key={weekIdx} className="relative border-b border-slate-200 last:border-b-0">
 
               {/* Out-of-month dim overlay (pointer-events-none so bars stay clickable) */}
-              <div className="absolute inset-0 grid grid-cols-7 pointer-events-none z-[5]">
+              <div className="absolute inset-0 grid grid-cols-7 pointer-events-none z-0">
                 {week.days.map((day, di) => (
                   <div key={di} className={day.isOutOfMonth ? "bg-slate-200/70" : ""} />
                 ))}
@@ -735,7 +755,7 @@ function StageCalendar({
 
               {/* Event bars */}
               <div
-                className="grid grid-cols-7 px-0 pb-1.5 pt-0.5"
+                className="relative z-[1] grid grid-cols-7 px-0 pb-1.5 pt-0.5"
                 style={{
                   gridTemplateRows: `repeat(${Math.max(week.maxRowIndex + 1, 1)}, 24px)`,
                   rowGap: "3px",
@@ -887,7 +907,7 @@ function StageCalendar({
             zIndex: 9999,
             pointerEvents: "none",
           }}
-          className="bg-white border border-slate-200 shadow-xl rounded-xl max-w-[230px]"
+          className="hidden sm:block bg-white border border-slate-200 shadow-xl rounded-xl max-w-[230px]"
         >
           <div className="p-3 space-y-2">
             {(() => {
@@ -1007,7 +1027,27 @@ function StageReservationPageContent() {
   const [selectedSlot, setSelectedSlot] = useState<Stage | null>(null);
   const [showForm, setShowForm] = useState(false);
 
+  // Pre-select a stage from URL params (coming from StageCalendarWidget)
+  const pendingStageId = useRef(searchParams.get("stageId"));
+  const defaultViewDate = useMemo(() => {
+    const d = searchParams.get("stageDate");
+    if (!d) return undefined;
+    const parsed = new Date(d);
+    return isNaN(parsed.getTime()) ? undefined : new Date(parsed.getFullYear(), parsed.getMonth(), 1);
+  }, [searchParams]);
+
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+
+  // Auto-select stage from URL param once accumulated stages are loaded
+  useEffect(() => {
+    if (!pendingStageId.current || accumulatedStages.length === 0) return;
+    const match = accumulatedStages.find((s) => s.id === pendingStageId.current);
+    if (match) {
+      pendingStageId.current = null;
+      setSelectedSlot(match);
+      setShowForm(true);
+    }
+  }, [accumulatedStages]);
 
   const { getPrice: getStagePrice, loading: pricesLoading } = useStagePrices();
   const participantType = watch("participantType");
@@ -1119,38 +1159,38 @@ function StageReservationPageContent() {
   const effectiveCategory = selectedSlot ? resolveEffectiveCategory(selectedSlot) : "";
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="bg-slate-50 pb-24">
       {/* Sticky header */}
       <div className={cn(
         "bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm transition-all ease-in-out duration-300",
         isScrolled ? "pt-0 pb-0" : "pt-12 pb-4",
       )}>
-        <div className="max-w-4xl mx-auto pl-16 pr-20 sm:px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Link href="/reserver">
+        <div className="max-w-4xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between gap-3 sm:gap-4">
+            <Link href="/reserver" className="shrink-0">
               <Button variant="outline" size="sm">
-                <ArrowLeft className="w-4 h-4 mr-2" /> Retour
+                <ArrowLeft className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Retour</span>
               </Button>
             </Link>
-            <h1 className="text-lg sm:text-2xl font-bold text-slate-800 truncate">
+            <h1 className="text-base sm:text-xl font-bold text-slate-800 truncate flex-1 text-center sm:text-left">
               Réserver un stage
             </h1>
+            <div className="shrink-0">
+              <StepIndicator currentStep={showForm ? 2 : 1} />
+            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-8 pt-24 space-y-6">
         <GiftVoucherBanner />
-        <StepIndicator currentStep={showForm ? 2 : 1} />
 
         {/* ── ÉTAPE 1 : calendrier (masqué en étape 2) ── */}
         {!showForm ? (
           <div className="space-y-5">
             <div className="text-center">
               <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-2">Choisissez votre créneau</h2>
-              <p className="text-slate-600 text-sm sm:text-base">
-                Filtrez par type et cliquez sur un stage dans le calendrier
-              </p>
             </div>
 
             {/* Type checkboxes */}
@@ -1188,9 +1228,6 @@ function StageReservationPageContent() {
                             {cat.durationDays} jours
                           </span>
                         </div>
-                        <p className="text-xs text-slate-500 mt-1 leading-snug">
-                          {cat.description}
-                        </p>
                         <p className="text-xs text-slate-400 mt-1">
                           {pricesLoading ? "..." : `À partir de ${getStagePrice(cat.id)}€`}
                         </p>
@@ -1210,6 +1247,7 @@ function StageReservationPageContent() {
                   selectedSlot={selectedSlot}
                   onStagesAccumulated={setAccumulatedStages}
                   onViewDateChange={setCalendarViewDate}
+                  defaultViewDate={defaultViewDate}
                 />
               </CardContent>
             </Card>

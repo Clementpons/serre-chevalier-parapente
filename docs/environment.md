@@ -17,10 +17,9 @@ Each app has its own `.env.example` with placeholder values. Copy it to `.env.lo
 | `RESEND_API_KEY` | ✅ | Resend API key for transactional emails. |
 | `RESEND_FROM_EMAIL` | ✅ | Sender email address (must be verified in Resend). |
 | `ADMIN_EMAIL` | ✅ | Email address that receives new order notifications. |
-| `TWILIO_ACCOUNT_SID` | ⚡ SMS only | Twilio account SID. |
-| `TWILIO_AUTH_TOKEN` | ⚡ SMS only | Twilio auth token. |
-| `TWILIO_PHONE_NUMBER` | ⚡ SMS only | Twilio sender phone number. |
-| `TWILIO_SIMULATION` | — | Set `"true"` in dev to log SMS instead of sending. Default: `"false"`. |
+| `BREVO_API_KEY` | ⚡ SMS only | Clé API Brevo (`xkeysib-...`). Disponible dans Brevo > Paramètres > API. |
+| `BREVO_SENDER_NAME` | ⚡ SMS only | Nom d'expéditeur alphanumérique (max 11 caractères, ex: `SCPARAPENTE`). |
+| `SMS_SIMULATION` | — | Set `"true"` in dev to log SMS instead of sending. Default: `"false"`. |
 
 ## apps/front
 
@@ -44,6 +43,6 @@ In Vercel, set environment variables per environment:
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_test_...` | `pk_test_...` | `pk_live_...` |
 | `STRIPE_WEBHOOK_SECRET` | (Stripe CLI) | `whsec_...` | `whsec_...` |
 | `DATABASE_URL` | (Docker) | (Supabase dev DB) | (Supabase prod DB) |
-| `TWILIO_SIMULATION` | `true` | `true` | `false` |
+| `SMS_SIMULATION` | `true` | `true` | `false` |
 
 **Never put live Stripe keys in local `.env.local`.** Use test keys locally. Vercel's `Production` environment is the only place live keys should exist.

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { requireAdmin } from "@/lib/middlewares";
 import prisma from "@/lib/prisma";
 import { zValidator } from "@hono/zod-validator";
+import { z } from "zod";
 import { CreateCampaignSchema, UpdateCampaignSchema } from "../schemas";
 import { sendSms } from "@/lib/twilio";
 import { normalizeMobileNumber } from "@/lib/phone-normalizer";
@@ -108,6 +109,43 @@ const app = new Hono()
       });
     }
   })
+
+  // Envoi d'un SMS de test
+  .post(
+    "/test-sms",
+    requireAdmin,
+    zValidator(
+      "json",
+      z.object({
+        message: z.string().min(1).max(1600),
+        recipients: z.array(z.string()).min(1).max(10),
+      }),
+    ),
+    async (c) => {
+      const { message, recipients } = c.req.valid("json");
+      const results = [];
+
+      for (const phone of recipients) {
+        const norm = normalizeMobileNumber(phone);
+        if (!norm.isValid || !norm.formattedNumber) {
+          results.push({
+            phone,
+            success: false,
+            error: norm.error || "Numéro invalide",
+          });
+          continue;
+        }
+        const result = await sendSms({ to: norm.formattedNumber, body: message });
+        results.push({
+          phone: norm.formattedNumber,
+          success: result.success,
+          error: result.error,
+        });
+      }
+
+      return c.json({ success: true, data: results });
+    },
+  )
 
   // Création / Planification
   .post(

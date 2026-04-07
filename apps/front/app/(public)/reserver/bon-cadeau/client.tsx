@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { Gift, ShoppingCart, ArrowLeft, ArrowRight, Plus, Loader2, Check, X } from 'lucide-react';
+import { Gift, ShoppingCart, ArrowLeft, Plus, Loader2, Check } from 'lucide-react';
 import { SessionManager } from '@/lib/sessionManager';
 import { useToast } from '@/components/ui/use-toast';
 import {
@@ -97,41 +97,6 @@ interface GiftVoucherFormData {
   buyerName: string;
   buyerEmail: string;
   personalMessage: string;
-}
-
-// ─── Gift Voucher Banner ──────────────────────────────────────────────────────
-
-function UseVoucherBanner() {
-  const [visible, setVisible] = useState(true);
-  if (!visible) return null;
-  return (
-    <div className="flex items-center gap-3 justify-between bg-cyan-50 border border-cyan-200 rounded-xl px-4 py-3">
-      <div className="flex items-center gap-2 min-w-0">
-        <Gift className="w-5 h-5 text-cyan-600 shrink-0" />
-        <p className="text-sm text-cyan-800 font-medium">
-          Vous avez déjà un bon cadeau ? Utilisez-le dès maintenant.
-        </p>
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <Link href="/utiliser-bon-cadeau">
-          <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700 gap-1 text-xs hidden sm:flex">
-            Utiliser mon bon cadeau <ArrowRight className="w-3 h-3" />
-          </Button>
-          <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700 text-xs sm:hidden">
-            Utiliser
-          </Button>
-        </Link>
-        <button
-          type="button"
-          onClick={() => setVisible(false)}
-          className="p-1 text-cyan-500 hover:text-cyan-800 transition-colors rounded"
-          aria-label="Fermer"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -294,8 +259,6 @@ export default function BonCadeauReservationClientPage() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-8 pt-24 space-y-8">
-
-        <UseVoucherBanner />
 
         <div className="text-center">
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-2">Choisissez le bon cadeau à offrir</h2>

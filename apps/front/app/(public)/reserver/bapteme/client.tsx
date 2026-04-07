@@ -136,7 +136,7 @@ const MONTH_NAMES = [
   "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
 ];
 
-const DAY_NAMES = ["Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam.", "Dim."];
+const DAY_NAMES = ["Dim.", "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam."];
 
 const CATEGORY_CONFIG: Record<
   string,
@@ -211,8 +211,6 @@ function initCategoriesFromParam(param: string | null): string[] {
 // ─── Gift Voucher Banner ──────────────────────────────────────────────────────
 
 function GiftVoucherBanner() {
-  const [visible, setVisible] = useState(true);
-  if (!visible) return null;
   return (
     <div className="flex items-center gap-3 justify-between bg-cyan-50 border border-cyan-200 rounded-xl px-4 py-3">
       <div className="flex items-center gap-2 min-w-0">
@@ -230,13 +228,6 @@ function GiftVoucherBanner() {
             Utiliser
           </Button>
         </Link>
-        <button
-          onClick={() => setVisible(false)}
-          className="p-1 text-cyan-500 hover:text-cyan-800 transition-colors rounded"
-          aria-label="Fermer"
-        >
-          <X className="w-4 h-4" />
-        </button>
       </div>
     </div>
   );
@@ -254,11 +245,11 @@ function StepIndicator({ currentStep }: { currentStep: 1 | 2 }) {
         )}>
           {currentStep > 1 ? <Check className="w-4 h-4" /> : "1"}
         </div>
-        <span className={cn("text-sm font-medium", currentStep >= 1 ? "text-blue-700" : "text-slate-400")}>
+        <span className={cn("hidden sm:inline text-sm font-medium", currentStep >= 1 ? "text-blue-700" : "text-slate-400")}>
           Choisir un créneau
         </span>
       </div>
-      <div className={cn("h-0.5 w-8 mx-1 transition-colors", currentStep >= 2 ? "bg-blue-600" : "bg-slate-200")} />
+      <div className={cn("h-0.5 w-6 sm:w-8 mx-1 transition-colors", currentStep >= 2 ? "bg-blue-600" : "bg-slate-200")} />
       <div className="flex items-center gap-2">
         <div className={cn(
           "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all",
@@ -266,7 +257,7 @@ function StepIndicator({ currentStep }: { currentStep: 1 | 2 }) {
         )}>
           2
         </div>
-        <span className={cn("text-sm font-medium", currentStep >= 2 ? "text-blue-700" : "text-slate-400")}>
+        <span className={cn("hidden sm:inline text-sm font-medium", currentStep >= 2 ? "text-blue-700" : "text-slate-400")}>
           Vos informations
         </span>
       </div>
@@ -443,6 +434,7 @@ function BaptemeCalendar({
 
   // Per-month bapteme cache
   const baptemeCache = useRef<Map<string, Bapteme[]>>(new Map());
+  const isAutoNavigating = useRef(true);
   const [localBaptemes, setLocalBaptemes] = useState<Bapteme[]>([]);
   const [loadingBaptemes, setLoadingBaptemes] = useState(false);
 
@@ -479,6 +471,27 @@ function BaptemeCalendar({
         const baptemes: Bapteme[] = data.data;
         baptemeCache.current.set(cacheKey, baptemes);
         setLocalBaptemes(baptemes);
+
+        // Auto-navigate to the first month that has upcoming baptemes
+        if (isAutoNavigating.current) {
+          const hasUpcoming = baptemes.some((b) => {
+            const d = new Date(b.date);
+            d.setHours(0, 0, 0, 0);
+            return d >= today;
+          });
+          if (!hasUpcoming) {
+            const nextMonth = new Date(year, month + 1, 1);
+            const maxDate = new Date(today.getFullYear(), today.getMonth() + 12, 1);
+            if (nextMonth < maxDate) {
+              setViewDate(nextMonth);
+              onViewDateChange?.(nextMonth);
+            } else {
+              isAutoNavigating.current = false;
+            }
+          } else {
+            isAutoNavigating.current = false;
+          }
+        }
 
         // Bubble accumulated baptemes up for StatsSummary
         const deduped = new Map<string, Bapteme>();
@@ -539,8 +552,7 @@ function BaptemeCalendar({
     const month = viewDate.getMonth();
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
-    let startDow = firstDay.getDay();
-    startDow = startDow === 0 ? 6 : startDow - 1;
+    const startDow = firstDay.getDay();
 
     const days: CalDay[] = [];
 
@@ -632,6 +644,7 @@ function BaptemeCalendar({
           <Button
             variant="outline" size="sm"
             onClick={() => {
+              isAutoNavigating.current = false;
               const d = new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1);
               setViewDate(d);
               onViewDateChange?.(d);
@@ -648,6 +661,7 @@ function BaptemeCalendar({
           <Button
             variant="outline" size="sm"
             onClick={() => {
+              isAutoNavigating.current = false;
               const d = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1);
               setViewDate(d);
               onViewDateChange?.(d);
@@ -662,10 +676,15 @@ function BaptemeCalendar({
 
           {/* Day-name header */}
           <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-200">
-            {DAY_NAMES.map((day) => (
+            {DAY_NAMES.map((day, i) => (
               <div
                 key={day}
-                className="text-center text-xs font-semibold text-blue-600 py-2 border-r border-slate-200 last:border-r-0"
+                className={cn(
+                  "text-center text-xs font-semibold py-2 border-r border-slate-200 last:border-r-0",
+                  i === 0
+                    ? "text-blue-800 bg-blue-100 font-bold"
+                    : "text-blue-600",
+                )}
               >
                 {day}
               </div>
@@ -1118,23 +1137,26 @@ function BaptemeReservationPageContent() {
         "bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm transition-all ease-in-out duration-300",
         isScrolled ? "pt-0 pb-0" : "pt-12 pb-4",
       )}>
-        <div className="max-w-4xl mx-auto pl-16 pr-20 sm:px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Link href="/reserver">
+        <div className="max-w-4xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between gap-3 sm:gap-4">
+            <Link href="/reserver" className="shrink-0">
               <Button variant="outline" size="sm">
-                <ArrowLeft className="w-4 h-4 mr-2" /> Retour
+                <ArrowLeft className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Retour</span>
               </Button>
             </Link>
-            <h1 className="text-lg sm:text-2xl font-bold text-slate-800 truncate">
+            <h1 className="text-base sm:text-xl font-bold text-slate-800 truncate flex-1 text-center sm:text-left">
               Réserver un baptême
             </h1>
+            <div className="shrink-0">
+              <StepIndicator currentStep={showForm ? 2 : 1} />
+            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-8 pt-24 space-y-6">
         <GiftVoucherBanner />
-        <StepIndicator currentStep={showForm ? 2 : 1} />
 
         {/* ── ÉTAPE 1 : calendrier (masqué en étape 2) ── */}
         {!showForm ? (
@@ -1143,9 +1165,6 @@ function BaptemeReservationPageContent() {
               <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-2">
                 Choisissez votre créneau
               </h2>
-              <p className="text-slate-600 text-sm sm:text-base">
-                Filtrez par formule et cliquez sur un créneau dans le calendrier
-              </p>
             </div>
 
             {/* Category checkboxes */}
@@ -1185,9 +1204,6 @@ function BaptemeReservationPageContent() {
                             {cat.durationLabel}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-500 mt-1 leading-snug">
-                          {cat.description}
-                        </p>
                         <p className="text-xs text-slate-400 mt-1">
                           {pricesLoading ? "..." : `${getBaptemePrice(cat.id)}€`}
                         </p>

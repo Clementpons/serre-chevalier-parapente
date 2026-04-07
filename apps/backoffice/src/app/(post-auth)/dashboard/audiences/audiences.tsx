@@ -44,6 +44,8 @@ const RULE_LABELS: Record<string, string> = {
   STAGIAIRE_BAPTEME: "Participé à un baptême",
   PURCHASED_GIFT_VOUCHER: "Acheté un bon cadeau",
   ORDER_ABOVE_AMOUNT: "Commande > X€",
+  CLIENT_NO_ORDER: "Client sans commande",
+  STAGIAIRE_NO_BOOKING: "Stagiaire sans réservation",
 };
 
 // Composant de prévisualisation des contacts d'une audience

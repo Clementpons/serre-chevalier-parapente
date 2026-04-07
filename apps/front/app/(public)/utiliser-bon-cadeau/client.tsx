@@ -628,7 +628,7 @@ function VoucherStageCalendar({
             zIndex: 9999,
             pointerEvents: "none",
           }}
-          className="bg-white border border-slate-200 shadow-xl rounded-xl max-w-[230px]"
+          className="hidden sm:block bg-white border border-slate-200 shadow-xl rounded-xl max-w-[230px]"
         >
           <div className="p-3 space-y-2">
             {(() => {

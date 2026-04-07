@@ -213,6 +213,36 @@ export async function resolveAudience(
         }
         break;
       }
+      case "CLIENT_NO_ORDER": {
+        const clients = await prisma.client.findMany({
+          where: { orders: { none: {} } },
+          select: {
+            firstName: true,
+            lastName: true,
+            phone: true,
+            email: true,
+          },
+        });
+        for (const c of clients) {
+          if (c.phone)
+            addContact(c.phone, `${c.firstName} ${c.lastName}`, c.email);
+        }
+        break;
+      }
+      case "STAGIAIRE_NO_BOOKING": {
+        const stagiaires = await prisma.stagiaire.findMany({
+          where: {
+            stageBookings: { none: {} },
+            baptemeBookings: { none: {} },
+          },
+          select: { firstName: true, lastName: true, phone: true, email: true },
+        });
+        for (const s of stagiaires) {
+          if (s.phone)
+            addContact(s.phone, `${s.firstName} ${s.lastName}`, s.email);
+        }
+        break;
+      }
     }
   }
 

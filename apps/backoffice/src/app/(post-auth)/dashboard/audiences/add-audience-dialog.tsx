@@ -43,6 +43,8 @@ const RULE_LABELS: Record<string, string> = {
   STAGIAIRE_BAPTEME: "A participé à un baptême (stagiaire)",
   PURCHASED_GIFT_VOUCHER: "A acheté un bon cadeau",
   ORDER_ABOVE_AMOUNT: "A passé une commande > X€",
+  CLIENT_NO_ORDER: "Client sans aucune commande",
+  STAGIAIRE_NO_BOOKING: "Stagiaire sans aucune réservation",
 };
 
 const STAGE_TYPES = [

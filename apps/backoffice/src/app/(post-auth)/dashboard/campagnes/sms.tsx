@@ -36,6 +36,7 @@ import { AddCampaignDialog } from "./add-campaign-dialog";
 import { EditCampaignDialog } from "./edit-campaign-dialog";
 import { CampaignPreviewDialog } from "./campaign-preview-dialog";
 import { CampaignLogsDialog } from "./campaign-logs-dialog";
+import { TestSmsDialog } from "./test-sms-dialog";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -50,6 +51,7 @@ function SMSSection() {
     name: string;
   } | null>(null);
   const [logsCampaignId, setLogsCampaignId] = useState<string | null>(null);
+  const [isTestSmsOpen, setIsTestSmsOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -70,10 +72,16 @@ function SMSSection() {
             Gérez vos envois de SMS en masse à destination de vos audiences.
           </p>
         </div>
-        <Button onClick={() => setIsAddOpen(true)}>
-          <PlusIcon className="h-4 w-4 mr-2" />
-          Nouvelle campagne
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsTestSmsOpen(true)}>
+            <PhoneIcon className="h-4 w-4 mr-2" />
+            SMS de test
+          </Button>
+          <Button onClick={() => setIsAddOpen(true)}>
+            <PlusIcon className="h-4 w-4 mr-2" />
+            Nouvelle campagne
+          </Button>
+        </div>
       </div>
 
       {!campaigns || campaigns.length === 0 ? (
@@ -234,6 +242,11 @@ function SMSSection() {
         campaignId={logsCampaignId}
         open={!!logsCampaignId}
         onOpenChange={(open: boolean) => !open && setLogsCampaignId(null)}
+      />
+
+      <TestSmsDialog
+        open={isTestSmsOpen}
+        onOpenChange={setIsTestSmsOpen}
       />
     </div>
   );

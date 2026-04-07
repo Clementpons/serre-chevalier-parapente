@@ -8,6 +8,8 @@ const AudienceRuleSchema = z.object({
     "STAGIAIRE_BAPTEME",
     "PURCHASED_GIFT_VOUCHER",
     "ORDER_ABOVE_AMOUNT",
+    "CLIENT_NO_ORDER",
+    "STAGIAIRE_NO_BOOKING",
   ]),
   stageType: z.enum(["INITIATION", "PROGRESSION", "AUTONOMIE"]).optional(),
   baptemeCategory: z
