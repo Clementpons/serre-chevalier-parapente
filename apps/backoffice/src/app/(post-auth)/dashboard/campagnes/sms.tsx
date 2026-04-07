@@ -30,12 +30,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useGetCampaigns } from "@/features/campaigns/api/use-get-campaigns";
 import { useDeleteCampaign } from "@/features/campaigns/api/use-delete-campaign";
-import { useSendCampaign } from "@/features/campaigns/api/use-send-campaign";
-import { useResolveCampaign } from "@/features/campaigns/api/use-resolve-campaign";
 import { AddCampaignDialog } from "./add-campaign-dialog";
 import { EditCampaignDialog } from "./edit-campaign-dialog";
 import { CampaignPreviewDialog } from "./campaign-preview-dialog";
 import { CampaignLogsDialog } from "./campaign-logs-dialog";
+import { CampaignSendDialog } from "./campaign-send-dialog";
 import { TestSmsDialog } from "./test-sms-dialog";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -43,7 +42,6 @@ import { fr } from "date-fns/locale";
 function SMSSection() {
   const { data: campaigns, isLoading } = useGetCampaigns();
   const deleteCampaign = useDeleteCampaign();
-  const sendCampaign = useSendCampaign();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editCampaign, setEditCampaign] = useState<any>(null);
   const [previewCampaign, setPreviewCampaign] = useState<{
@@ -51,6 +49,7 @@ function SMSSection() {
     name: string;
   } | null>(null);
   const [logsCampaignId, setLogsCampaignId] = useState<string | null>(null);
+  const [sendCampaign, setSendCampaign] = useState<{ id: string; name: string } | null>(null);
   const [isTestSmsOpen, setIsTestSmsOpen] = useState(false);
 
   if (isLoading) {
@@ -205,12 +204,11 @@ function SMSSection() {
                   </Button>
                 )}
 
-                {campaign.status === "DRAFT" && (
+                {(campaign.status === "DRAFT" || campaign.status === "SENDING") && (
                   <Button
                     size="sm"
                     className="flex-[2]"
-                    onClick={() => sendCampaign.mutate(campaign.id)}
-                    disabled={sendCampaign.isPending}
+                    onClick={() => setSendCampaign({ id: campaign.id, name: campaign.name })}
                   >
                     <SendIcon className="h-4 w-4 mr-2" />
                     Envoyer
@@ -242,6 +240,12 @@ function SMSSection() {
         campaignId={logsCampaignId}
         open={!!logsCampaignId}
         onOpenChange={(open: boolean) => !open && setLogsCampaignId(null)}
+      />
+
+      <CampaignSendDialog
+        campaign={sendCampaign}
+        open={!!sendCampaign}
+        onOpenChange={(open) => !open && setSendCampaign(null)}
       />
 
       <TestSmsDialog
