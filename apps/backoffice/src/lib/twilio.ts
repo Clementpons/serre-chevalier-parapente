@@ -49,10 +49,6 @@ export async function sendSms({
     content: body,
     type: "marketing",
   };
-  console.log("[Brevo] API key length:", apiKey?.length);
-  console.log("[Brevo] API key début:", apiKey?.slice(0, 10));
-  console.log("[Brevo] API key fin:", apiKey?.slice(-6));
-  console.log("[Brevo] Payload:", JSON.stringify(payload));
 
   try {
     const response = await fetch(
@@ -65,12 +61,11 @@ export async function sendSms({
           Accept: "application/json",
         },
         body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(15000), // 15s max par SMS
       },
     );
 
     const data = await response.json();
-    console.log("[Brevo] HTTP status:", response.status);
-    console.log("[Brevo] Response body:", JSON.stringify(data));
 
     if (!response.ok) {
       const errorMsg = data.message || `HTTP ${response.status}`;
@@ -84,10 +79,11 @@ export async function sendSms({
       status: "SENT",
     };
   } catch (error: any) {
-    console.error(`Erreur d'envoi SMS Brevo vers ${to}:`, error);
+    const isTimeout = error.name === "TimeoutError" || error.name === "AbortError";
+    console.error(`Erreur d'envoi SMS Brevo vers ${to}:`, isTimeout ? "Timeout (15s)" : error.message);
     return {
       success: false,
-      error: error.message || "Erreur inconnue Brevo",
+      error: isTimeout ? "Timeout : Brevo n'a pas répondu en 15s" : (error.message || "Erreur inconnue Brevo"),
       status: "FAILED",
     };
   }
