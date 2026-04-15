@@ -16,6 +16,7 @@ import Link from "next/link";
 import { ReserveButton } from "@/components/booking/ReserveButton";
 import { MinPriceDisplay } from "@/components/price/MinPriceDisplay";
 import { VideoOptionPriceText } from "@/components/price/VideoOptionPriceText";
+import { BaptemeCalendarSection } from "./BaptemeCalendarSection";
 
 export async function generateMetadata() {
   return {
@@ -70,7 +71,7 @@ export default function NosStagesPage() {
         </div>
       </section>
       {/* SECTION PRES */}
-      <section className="mx-4 my-24 lg:mx-36 xl:mx-48 lg:my-48 mt-8 lg:mt-16 lg:flex lg:gap-12 lg:items-center">
+      {/* <section className="mx-4 my-24 lg:mx-36 xl:mx-48 lg:my-48 mt-8 lg:mt-16 lg:flex lg:gap-12 lg:items-center">
         <div className="inline-block lg:w-1/2 h-[40vh] xl:h-[50vh] rounded-lg overflow-hidden">
           <Image
             src="/placeholder/bento_sites-vols-granon.webp"
@@ -114,9 +115,9 @@ export default function NosStagesPage() {
             </Link>
           </div>
         </div>
-      </section>
+      </section> */}
       {/* SECTION FORMULES */}
-      <h2
+      {/* <h2
         className={cn(
           "relative",
           "text-center max-w-3/4 font-bold text-4xl text-slate-800",
@@ -128,7 +129,7 @@ export default function NosStagesPage() {
           className="absolute w-1 h-1 top-[-200%] left-0"
           id="formules"
         ></div>
-      </h2>
+      </h2> */}
       <section className="mx-4 my-24 lg:mx-36 xl:mx-48 lg:my-48 lg:flex lg:flex-row-reverse lg:gap-12 lg:items-center">
         <Link
           href="/reserver/bapteme?category=AVENTURE"
@@ -446,6 +447,9 @@ export default function NosStagesPage() {
           </div>
         </div>
       </section>
+      {/* SECTION CALENDRIER CRÉNEAUX */}
+      <BaptemeCalendarSection />
+
       {/* SECTION BON D'ACHATS */}
       <h2
         className={cn(

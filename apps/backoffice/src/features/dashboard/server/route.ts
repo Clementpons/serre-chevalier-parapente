@@ -7,178 +7,277 @@ const app = new Hono()
   .get("/stats", requireMonitor, async (c) => {
     try {
       const now = new Date();
-      const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const currentMonthEnd = new Date(
-        now.getFullYear(),
-        now.getMonth() + 1,
-        0,
-        23,
-        59,
-        59
-      );
-      const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const prevMonthEnd = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        0,
-        23,
-        59,
-        59
-      );
+
+      // Parse selectedMonth param (format: YYYY-MM)
+      const selectedMonthParam = c.req.query("selectedMonth");
+      let smYear: number, smMonth0: number; // smMonth0 = 0-indexed
+      if (selectedMonthParam && /^\d{4}-\d{2}$/.test(selectedMonthParam)) {
+        const parts = selectedMonthParam.split("-").map(Number);
+        smYear = parts[0];
+        smMonth0 = parts[1] - 1;
+      } else {
+        smYear = now.getFullYear();
+        smMonth0 = now.getMonth();
+      }
+      const smStart = new Date(smYear, smMonth0, 1);
+      const smEnd = new Date(smYear, smMonth0 + 1, 0, 23, 59, 59);
+
+      // Current year bounds (saison)
       const currentYearStart = new Date(now.getFullYear(), 0, 1);
+      const currentYearEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
 
-      // Calculate the start date for 13 months ago
-      const thirteenMonthsAgo = new Date(
-        now.getFullYear(),
-        now.getMonth() - 12,
-        1
-      );
+      // Current/prev month (kept for backward compat)
+      const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
 
-      // Fetch revenue data for current month (online vs total)
-      const [
-        onlineRevenueThisMonth,
-        manualRevenueThisMonth,
-        totalRevenueThisYear,
-      ] = await Promise.all([
-        // Online revenue (Stripe payments only) for current month
-        prisma.payment.aggregate({
-          where: {
-            status: "SUCCEEDED",
-            isManual: false,
-            paymentType: { not: "GIFT_VOUCHER" },
-            createdAt: { gte: currentMonthStart, lte: currentMonthEnd },
-          },
-          _sum: { amount: true },
-        }),
+      // Chart: 13 months
+      const thirteenMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 12, 1);
 
-        // Manual revenue (manual payments only) for current month
-        prisma.payment.aggregate({
-          where: {
-            status: "SUCCEEDED",
-            isManual: true,
-            paymentType: { not: "GIFT_VOUCHER" },
-            createdAt: { gte: currentMonthStart, lte: currentMonthEnd },
-          },
-          _sum: { amount: true },
-        }),
+      // Fetch user role
+      const user = await prisma.user.findUnique({
+        where: { id: c.get("userId") },
+        select: { role: true },
+      });
 
-        // Total revenue for current year
-        prisma.payment.aggregate({
-          where: {
-            status: "SUCCEEDED",
-            paymentType: { not: "GIFT_VOUCHER" },
-            createdAt: { gte: currentYearStart },
-          },
-          _sum: { amount: true },
-        }),
-      ]);
+      // Revenue for backward compat (current month)
+      const [onlineRevenueThisMonth, manualRevenueThisMonth, totalRevenueThisYear] =
+        await Promise.all([
+          prisma.payment.aggregate({
+            where: {
+              status: "SUCCEEDED",
+              isManual: false,
+              paymentType: { not: "GIFT_VOUCHER" },
+              createdAt: { gte: currentMonthStart, lte: currentMonthEnd },
+            },
+            _sum: { amount: true },
+          }),
+          prisma.payment.aggregate({
+            where: {
+              status: "SUCCEEDED",
+              isManual: true,
+              paymentType: { not: "GIFT_VOUCHER" },
+              createdAt: { gte: currentMonthStart, lte: currentMonthEnd },
+            },
+            _sum: { amount: true },
+          }),
+          prisma.payment.aggregate({
+            where: {
+              status: "SUCCEEDED",
+              paymentType: { not: "GIFT_VOUCHER" },
+              createdAt: { gte: currentYearStart },
+            },
+            _sum: { amount: true },
+          }),
+        ]);
 
       const onlineRevenue = onlineRevenueThisMonth._sum.amount || 0;
       const manualRevenue = manualRevenueThisMonth._sum.amount || 0;
       const totalRevenueMonth = onlineRevenue + manualRevenue;
       const totalRevenueYear = totalRevenueThisYear._sum.amount || 0;
 
-      const user = await prisma.user.findUnique({
-        where: { id: c.get("userId") },
-        select: { role: true },
-      });
-
-      // KPIs — admin only
-      let kpis = null;
-      if (user?.role === "ADMIN") {
-        const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-        const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-
+      // Helper: compute CA stats for a date range
+      const computePeriodStats = async (start: Date, end: Date) => {
         const [
-          upcomingStages,
-          upcomingBaptemes,
-          activeStageBookings,
-          activeBaptemeBookings,
-          totalStagiaires,
-          pendingBalanceAgg,
-          recentStageBookings,
-          recentBaptemeBookings,
+          onlinePaid,
+          manualPaid,
+          stageItemsAgg,
+          baptemeItemsAgg,
+          giftItemsAgg,
+          stageBookingsCount,
+          baptemeBookingsCount,
+          stageStagiaires,
+          baptemeStagiaires,
         ] = await Promise.all([
-          prisma.stage.count({ where: { startDate: { gte: now, lte: thirtyDaysFromNow } } }),
-          prisma.bapteme.count({ where: { date: { gte: now, lte: thirtyDaysFromNow } } }),
-          prisma.stageBooking.count(),
-          prisma.baptemeBooking.count(),
-          prisma.stagiaire.count(),
-          prisma.orderItem.aggregate({
-            where: { isFullyPaid: false, remainingAmount: { gt: 0 } },
-            _sum: { remainingAmount: true },
+          prisma.payment.aggregate({
+            where: { status: "SUCCEEDED", isManual: false, createdAt: { gte: start, lte: end } },
+            _sum: { amount: true },
           }),
-          prisma.stageBooking.count({ where: { createdAt: { gte: twentyFourHoursAgo } } }),
-          prisma.baptemeBooking.count({ where: { createdAt: { gte: twentyFourHoursAgo } } }),
+          prisma.payment.aggregate({
+            where: { status: "SUCCEEDED", isManual: true, createdAt: { gte: start, lte: end } },
+            _sum: { amount: true },
+          }),
+          prisma.orderItem.aggregate({
+            where: {
+              type: "STAGE",
+              order: {
+                createdAt: { gte: start, lte: end },
+                payments: { some: { status: "SUCCEEDED" } },
+              },
+            },
+            _sum: { totalPrice: true, depositAmount: true, remainingAmount: true },
+          }),
+          prisma.orderItem.aggregate({
+            where: {
+              type: "BAPTEME",
+              order: {
+                createdAt: { gte: start, lte: end },
+                payments: { some: { status: "SUCCEEDED" } },
+              },
+            },
+            _sum: { totalPrice: true, depositAmount: true, remainingAmount: true },
+          }),
+          prisma.orderItem.aggregate({
+            where: {
+              type: "GIFT_VOUCHER",
+              order: {
+                createdAt: { gte: start, lte: end },
+                payments: { some: { status: "SUCCEEDED" } },
+              },
+            },
+            _sum: { totalPrice: true, depositAmount: true, remainingAmount: true },
+          }),
+          prisma.stageBooking.count({ where: { createdAt: { gte: start, lte: end } } }),
+          prisma.baptemeBooking.count({ where: { createdAt: { gte: start, lte: end } } }),
+          prisma.stageBooking.findMany({
+            where: { createdAt: { gte: start, lte: end } },
+            select: { stagiaireId: true },
+            distinct: ["stagiaireId"],
+          }),
+          prisma.baptemeBooking.findMany({
+            where: { createdAt: { gte: start, lte: end } },
+            select: { stagiaireId: true },
+            distinct: ["stagiaireId"],
+          }),
         ]);
 
-        kpis = {
-          upcomingStages,
-          upcomingBaptemes,
-          activeReservations: activeStageBookings + activeBaptemeBookings,
-          totalStagiaires,
-          pendingBalance: pendingBalanceAgg._sum.remainingAmount || 0,
-          recentReservations: recentStageBookings + recentBaptemeBookings,
+        const onlineAmt = onlinePaid._sum.amount || 0;
+        const manualAmt = manualPaid._sum.amount || 0;
+        const totalCollected = onlineAmt + manualAmt;
+
+        const stageCA = stageItemsAgg._sum.totalPrice || 0;
+        const stagePending = stageItemsAgg._sum.remainingAmount || 0;
+        const stageDeposits = stageItemsAgg._sum.depositAmount || 0;
+
+        const baptemeCA = baptemeItemsAgg._sum.totalPrice || 0;
+        const baptemePending = baptemeItemsAgg._sum.remainingAmount || 0;
+
+        const giftCA = giftItemsAgg._sum.totalPrice || 0;
+        const giftPending = giftItemsAgg._sum.remainingAmount || 0;
+
+        const totalCA = stageCA + baptemeCA + giftCA;
+        const totalPending = stagePending + baptemePending + giftPending;
+        const depositsPaid = stageDeposits;
+        const balancesPaid = totalCollected - depositsPaid;
+
+        const uniqueStagiaires = new Set([
+          ...stageStagiaires.map((b) => b.stagiaireId),
+          ...baptemeStagiaires.map((b) => b.stagiaireId),
+        ]).size;
+
+        return {
+          totalCA,
+          totalCollected,
+          totalPending,
+          onlineCollected: onlineAmt,
+          manualCollected: manualAmt,
+          depositsPaid,
+          balancesPaid,
+          byProduct: {
+            stages: {
+              totalCA: stageCA,
+              collected: stageCA - stagePending,
+              pending: stagePending,
+            },
+            baptemes: {
+              totalCA: baptemeCA,
+              collected: baptemeCA - baptemePending,
+              pending: baptemePending,
+            },
+            giftVouchers: {
+              totalCA: giftCA,
+              collected: giftCA - giftPending,
+              pending: giftPending,
+            },
+          },
+          totalReservations: stageBookingsCount + baptemeBookingsCount,
+          uniqueStagiaires,
         };
-      }
+      };
 
       // Admin-only extended stats
       let chart = null;
       let thisMonth = null;
       let prevMonth = null;
       let reservations = null;
+      let annualStats = null;
+      let selectedMonthStats = null;
+      let selectedMonthActivities = null;
 
       if (user?.role === "ADMIN") {
-        // Stacked monthly revenue: total, online, manual, stages, baptemes, giftVouchers
-        const stackedMonthlyRaw = await prisma.$queryRaw<
-          Array<{
-            month: Date;
-            is_manual: boolean;
-            item_type: string | null;
-            total: number;
-          }>
-        >`
-          SELECT
-            DATE_TRUNC('month', p."createdAt") AS month,
-            p."isManual" AS is_manual,
-            oi."type" AS item_type,
-            COALESCE(SUM(pa."allocatedAmount"), 0)::float AS total
-          FROM "Payment" p
-          LEFT JOIN "PaymentAllocation" pa ON pa."paymentId" = p.id
-          LEFT JOIN "OrderItem" oi ON oi.id = pa."orderItemId"
-          WHERE p.status = 'SUCCEEDED'
-            AND p."paymentType" != 'GIFT_VOUCHER'
-            AND p."createdAt" >= ${thirteenMonthsAgo}
-          GROUP BY DATE_TRUNC('month', p."createdAt"), p."isManual", oi."type"
-          ORDER BY month ASC
-        `;
-
-        // Also get totals (without allocation breakdown) for payments that may not have allocations
-        const totalMonthlyRaw = await prisma.$queryRaw<
-          Array<{
-            month: Date;
-            is_manual: boolean;
-            total: number;
-          }>
-        >`
-          SELECT
-            DATE_TRUNC('month', "createdAt") AS month,
-            "isManual" AS is_manual,
-            COALESCE(SUM(amount), 0)::float AS total
-          FROM "Payment"
-          WHERE status = 'SUCCEEDED'
-            AND "paymentType" != 'GIFT_VOUCHER'
-            AND "createdAt" >= ${thirteenMonthsAgo}
-          GROUP BY DATE_TRUNC('month', "createdAt"), "isManual"
-          ORDER BY month ASC
-        `;
+        // ── Chart data ──────────────────────────────────────────────────────────
+        const [stackedMonthlyRaw, totalMonthlyRaw, pendingMonthlyRaw] = await Promise.all([
+          // Stacked by product type — grouped by ORDER creation month
+          prisma.$queryRaw<
+            Array<{
+              month: Date;
+              is_manual: boolean;
+              item_type: string | null;
+              total: number;
+            }>
+          >`
+            SELECT
+              DATE_TRUNC('month', o."createdAt") AS month,
+              p."isManual" AS is_manual,
+              oi."type" AS item_type,
+              COALESCE(SUM(pa."allocatedAmount"), 0)::float AS total
+            FROM "Payment" p
+            JOIN "PaymentAllocation" pa ON pa."paymentId" = p.id
+            JOIN "OrderItem" oi ON oi.id = pa."orderItemId"
+            JOIN "Order" o ON o.id = oi."orderId"
+            WHERE p.status = 'SUCCEEDED'
+              AND p."paymentType" != 'GIFT_VOUCHER'
+              AND o."createdAt" >= ${thirteenMonthsAgo}
+            GROUP BY DATE_TRUNC('month', o."createdAt"), p."isManual", oi."type"
+            ORDER BY month ASC
+          `,
+          // Totals online/manual — grouped by ORDER creation month
+          prisma.$queryRaw<
+            Array<{
+              month: Date;
+              is_manual: boolean;
+              total: number;
+            }>
+          >`
+            SELECT
+              DATE_TRUNC('month', o."createdAt") AS month,
+              p."isManual" AS is_manual,
+              COALESCE(SUM(pa."allocatedAmount"), 0)::float AS total
+            FROM "Payment" p
+            JOIN "PaymentAllocation" pa ON pa."paymentId" = p.id
+            JOIN "OrderItem" oi ON oi.id = pa."orderItemId"
+            JOIN "Order" o ON o.id = oi."orderId"
+            WHERE p.status = 'SUCCEEDED'
+              AND p."paymentType" != 'GIFT_VOUCHER'
+              AND o."createdAt" >= ${thirteenMonthsAgo}
+            GROUP BY DATE_TRUNC('month', o."createdAt"), p."isManual"
+            ORDER BY month ASC
+          `,
+          // Pending balance per month (from order creation date)
+          prisma.$queryRaw<
+            Array<{
+              month: Date;
+              pending_balance: number;
+            }>
+          >`
+            SELECT
+              DATE_TRUNC('month', o."createdAt") AS month,
+              COALESCE(SUM(oi."remainingAmount"), 0)::float AS pending_balance
+            FROM "OrderItem" oi
+            JOIN "Order" o ON o.id = oi."orderId"
+            WHERE oi."isFullyPaid" = false
+              AND oi."remainingAmount" > 0
+              AND o."createdAt" >= ${thirteenMonthsAgo}
+            GROUP BY DATE_TRUNC('month', o."createdAt")
+            ORDER BY month ASC
+          `,
+        ]);
 
         const byMonth = [];
         for (let i = 12; i >= 0; i--) {
           const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-          const monthKey = `${monthDate.getFullYear()}-${String(
-            monthDate.getMonth() + 1
-          ).padStart(2, "0")}`;
+          const monthKey = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, "0")}`;
 
           const matchMonth = (item: { month: Date }) => {
             const d = new Date(item.month);
@@ -188,7 +287,6 @@ const app = new Hono()
             );
           };
 
-          // Sum online and manual totals from the total query
           const onlineTotal = totalMonthlyRaw
             .filter((r) => matchMonth(r) && !r.is_manual)
             .reduce((s, r) => s + Number(r.total), 0);
@@ -196,7 +294,6 @@ const app = new Hono()
             .filter((r) => matchMonth(r) && r.is_manual)
             .reduce((s, r) => s + Number(r.total), 0);
 
-          // Sum by item type from the stacked query
           const stagesTotal = stackedMonthlyRaw
             .filter((r) => matchMonth(r) && r.item_type === "STAGE")
             .reduce((s, r) => s + Number(r.total), 0);
@@ -206,6 +303,10 @@ const app = new Hono()
           const giftVouchersTotal = stackedMonthlyRaw
             .filter((r) => matchMonth(r) && r.item_type === "GIFT_VOUCHER")
             .reduce((s, r) => s + Number(r.total), 0);
+
+          const pendingBalance = pendingMonthlyRaw
+            .filter((r) => matchMonth(r))
+            .reduce((s, r) => s + Number(r.pending_balance), 0);
 
           const monthLabelStr = monthDate.toLocaleDateString("fr-FR", {
             month: "short",
@@ -221,19 +322,99 @@ const app = new Hono()
             stages: stagesTotal,
             baptemes: baptemesTotal,
             giftVouchers: giftVouchersTotal,
+            pendingBalance,
           });
         }
 
         chart = { byMonth };
 
-        // thisMonth KPIs
+        // ── Annual + Monthly stats ──────────────────────────────────────────────
+        const [rawAnnual, rawSelectedMonth] = await Promise.all([
+          computePeriodStats(currentYearStart, currentYearEnd),
+          computePeriodStats(smStart, smEnd),
+        ]);
+
+        annualStats = { ...rawAnnual, year: now.getFullYear() };
+        selectedMonthStats = {
+          ...rawSelectedMonth,
+          year: smYear,
+          month: smMonth0 + 1,
+        };
+
+        // ── Monthly activities (fill rates) ────────────────────────────────────
+        const [monthStages, monthBaptemes, seasonStages, seasonBaptemes] = await Promise.all([
+          prisma.stage.findMany({
+            where: { startDate: { gte: smStart, lte: smEnd } },
+            select: {
+              id: true,
+              type: true,
+              startDate: true,
+              places: true,
+              _count: { select: { bookings: true } },
+            },
+            orderBy: { startDate: "asc" },
+          }),
+          prisma.bapteme.findMany({
+            where: { date: { gte: smStart, lte: smEnd } },
+            select: {
+              id: true,
+              date: true,
+              places: true,
+              _count: { select: { bookings: true } },
+            },
+            orderBy: { date: "asc" },
+          }),
+          prisma.stage.findMany({
+            where: { startDate: { gte: currentYearStart, lte: currentYearEnd } },
+            select: { places: true, _count: { select: { bookings: true } } },
+          }),
+          prisma.bapteme.findMany({
+            where: { date: { gte: currentYearStart, lte: currentYearEnd } },
+            select: { places: true, _count: { select: { bookings: true } } },
+          }),
+        ]);
+
+        const calcFillRate = (items: { places: number; _count: { bookings: number } }[]) => {
+          const totalPlaces = items.reduce((s, it) => s + it.places, 0);
+          const reservedPlaces = items.reduce((s, it) => s + it._count.bookings, 0);
+          return {
+            totalPlaces,
+            reservedPlaces,
+            rate: totalPlaces > 0 ? Math.round((reservedPlaces / totalPlaces) * 100) : 0,
+          };
+        };
+
+        selectedMonthActivities = {
+          year: smYear,
+          month: smMonth0 + 1,
+          stages: monthStages.map((st) => ({
+            id: st.id,
+            type: st.type,
+            startDate: st.startDate,
+            places: st.places,
+            bookingsCount: st._count.bookings,
+            fillRate: st.places > 0 ? Math.round((st._count.bookings / st.places) * 100) : 0,
+          })),
+          baptemes: monthBaptemes.map((b) => ({
+            id: b.id,
+            date: b.date,
+            places: b.places,
+            bookingsCount: b._count.bookings,
+            fillRate: b.places > 0 ? Math.round((b._count.bookings / b.places) * 100) : 0,
+          })),
+          seasonFillRate: {
+            stages: calcFillRate(seasonStages),
+            baptemes: calcFillRate(seasonBaptemes),
+          },
+        };
+
+        // ── thisMonth KPIs (backward compat) ───────────────────────────────────
         const [
           thisMonthSoldAgg,
           thisMonthCollectedOnline,
           thisMonthCollectedManual,
           thisMonthPendingBalance,
         ] = await Promise.all([
-          // totalSold: sum(Order.totalAmount) for orders with succeeded payment in period
           prisma.order.aggregate({
             where: {
               payments: {
@@ -245,7 +426,6 @@ const app = new Hono()
             },
             _sum: { totalAmount: true },
           }),
-          // online collected
           prisma.payment.aggregate({
             where: {
               status: "SUCCEEDED",
@@ -255,7 +435,6 @@ const app = new Hono()
             },
             _sum: { amount: true },
           }),
-          // manual collected
           prisma.payment.aggregate({
             where: {
               status: "SUCCEEDED",
@@ -265,7 +444,6 @@ const app = new Hono()
             },
             _sum: { amount: true },
           }),
-          // pending balance: sum(OrderItem.remainingAmount) where !isFullyPaid, order created in period
           prisma.orderItem.aggregate({
             where: {
               isFullyPaid: false,
@@ -348,9 +526,8 @@ const app = new Hono()
           pendingBalance: prevMonthPendingBalance._sum.remainingAmount || 0,
         };
 
-        // Reservations stats for current month
+        // Reservations stats
         const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-
         const [
           stageBookingsThisMonth,
           baptemeBookingsThisMonth,
@@ -375,10 +552,7 @@ const app = new Hono()
           }),
         ]);
 
-        const upcomingTotalPlaces = upcomingStagesForFill.reduce(
-          (s, st) => s + st.places,
-          0
-        );
+        const upcomingTotalPlaces = upcomingStagesForFill.reduce((s, st) => s + st.places, 0);
         const upcomingReservedPlaces = upcomingStagesForFill.reduce(
           (s, st) => s + st._count.bookings,
           0
@@ -410,12 +584,14 @@ const app = new Hono()
                   totalRevenueThisYear: totalRevenueYear,
                 }
               : null,
-          last13MonthsRevenue: null, // replaced by chart.byMonth
           chart: user?.role === "ADMIN" ? chart : null,
           thisMonth: user?.role === "ADMIN" ? thisMonth : null,
           prevMonth: user?.role === "ADMIN" ? prevMonth : null,
           reservations: user?.role === "ADMIN" ? reservations : null,
-          kpis,
+          kpis: null,
+          annualStats: user?.role === "ADMIN" ? annualStats : null,
+          selectedMonthStats: user?.role === "ADMIN" ? selectedMonthStats : null,
+          selectedMonthActivities: user?.role === "ADMIN" ? selectedMonthActivities : null,
         },
       });
     } catch (error) {
@@ -449,22 +625,8 @@ const app = new Hono()
       }
 
       const now = new Date();
-      const startOfDay = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-        0,
-        0,
-        0
-      );
-      const endOfDay = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-        23,
-        59,
-        59
-      );
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
 
       const isAdmin = user.role === "ADMIN";
 
@@ -624,7 +786,6 @@ const app = new Hono()
     try {
       const userId = c.get("userId");
 
-      // Fetch user to check role
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: { id: true, role: true },
@@ -638,35 +799,13 @@ const app = new Hono()
       }
 
       const now = new Date();
-      const startOfDay = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-        0,
-        0,
-        0
-      );
-      const endOfDay = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-        23,
-        59,
-        59
-      );
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
 
-      // Fetch stages where this monitor is assigned for today
       const stages = await prisma.stage.findMany({
         where: {
-          startDate: {
-            gte: startOfDay,
-            lte: endOfDay,
-          },
-          moniteurs: {
-            some: {
-              moniteurId: user.id,
-            },
-          },
+          startDate: { gte: startOfDay, lte: endOfDay },
+          moniteurs: { some: { moniteurId: user.id } },
         },
         include: {
           bookings: {
@@ -684,18 +823,10 @@ const app = new Hono()
         },
       });
 
-      // Fetch baptemes where this monitor is assigned for today
       const baptemes = await prisma.bapteme.findMany({
         where: {
-          date: {
-            gte: startOfDay,
-            lte: endOfDay,
-          },
-          moniteurs: {
-            some: {
-              moniteurId: user.id,
-            },
-          },
+          date: { gte: startOfDay, lte: endOfDay },
+          moniteurs: { some: { moniteurId: user.id } },
         },
         include: {
           bookings: {
@@ -713,21 +844,12 @@ const app = new Hono()
         },
       });
 
-      // Fetch next upcoming stage (after today)
       const nextStage = await prisma.stage.findFirst({
         where: {
-          startDate: {
-            gt: endOfDay,
-          },
-          moniteurs: {
-            some: {
-              moniteurId: user.id,
-            },
-          },
+          startDate: { gt: endOfDay },
+          moniteurs: { some: { moniteurId: user.id } },
         },
-        orderBy: {
-          startDate: "asc",
-        },
+        orderBy: { startDate: "asc" },
         include: {
           bookings: {
             include: {
@@ -744,21 +866,12 @@ const app = new Hono()
         },
       });
 
-      // Fetch next upcoming bapteme (after today)
       const nextBapteme = await prisma.bapteme.findFirst({
         where: {
-          date: {
-            gt: endOfDay,
-          },
-          moniteurs: {
-            some: {
-              moniteurId: user.id,
-            },
-          },
+          date: { gt: endOfDay },
+          moniteurs: { some: { moniteurId: user.id } },
         },
-        orderBy: {
-          date: "asc",
-        },
+        orderBy: { date: "asc" },
         include: {
           bookings: {
             include: {
@@ -775,7 +888,6 @@ const app = new Hono()
         },
       });
 
-      // Format the data
       const formattedStages = stages.map((stage) => ({
         id: stage.id,
         startDate: stage.startDate,
@@ -804,7 +916,6 @@ const app = new Hono()
         })),
       }));
 
-      // Format upcoming activities
       const formattedNextStage = nextStage
         ? {
             id: nextStage.id,

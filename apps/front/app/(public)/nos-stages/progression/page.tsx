@@ -27,7 +27,7 @@ export async function generateMetadata() {
     title: `Stage Parapente Progression (5j) – Serre Chevalier / Briançon`,
     description: `Perfectionnez votre pilotage en parapente avec notre stage progression à Serre Chevalier. 5 jours pour voler plus librement.`,
     alternates: {
-      canonical: `https://www.serre-chevalier-parapente.fr/nos-stages/initiation`,
+      canonical: `https://www.serre-chevalier-parapente.fr/nos-stages/progression`,
     },
   };
 }

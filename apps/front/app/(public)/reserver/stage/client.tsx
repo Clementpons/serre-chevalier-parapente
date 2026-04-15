@@ -261,10 +261,17 @@ function GiftVoucherBanner() {
 
 // ─── Step Indicator ───────────────────────────────────────────────────────────
 
-function StepIndicator({ currentStep }: { currentStep: 1 | 2 }) {
+function StepIndicator({ currentStep, onGoToStep1 }: { currentStep: 1 | 2; onGoToStep1?: () => void }) {
   return (
     <div className="flex items-center justify-center gap-2 py-2">
-      <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={currentStep === 2 ? onGoToStep1 : undefined}
+        className={cn(
+          "flex items-center gap-2 transition-opacity",
+          currentStep === 2 ? "cursor-pointer hover:opacity-70" : "cursor-default",
+        )}
+      >
         <div className={cn(
           "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all",
           currentStep >= 1 ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-500",
@@ -274,7 +281,7 @@ function StepIndicator({ currentStep }: { currentStep: 1 | 2 }) {
         <span className={cn("hidden sm:inline text-sm font-medium", currentStep >= 1 ? "text-blue-700" : "text-slate-400")}>
           Choisir un créneau
         </span>
-      </div>
+      </button>
       <div className={cn("h-0.5 w-6 sm:w-8 mx-1 transition-colors", currentStep >= 2 ? "bg-blue-600" : "bg-slate-200")} />
       <div className="flex items-center gap-2">
         <div className={cn(
@@ -1082,6 +1089,32 @@ function StageReservationPageContent() {
     }
   }, [setValue]);
 
+  // Push a history entry when entering step 2 so the browser back button works
+  useEffect(() => {
+    if (showForm) {
+      history.pushState({ step: 2 }, "");
+    }
+  }, [showForm]);
+
+  // Intercept browser back button when on step 2 → go back to step 1
+  useEffect(() => {
+    const handlePopState = () => {
+      if (showForm) {
+        setSelectedSlot(null);
+        setShowForm(false);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [showForm]);
+
+  const goToStep1 = () => {
+    setSelectedSlot(null);
+    setShowForm(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const toggleType = (typeId: string) => {
     setSelectedTypes((prev) => {
       if (prev.includes(typeId) && prev.length === 1) return prev;
@@ -1167,17 +1200,26 @@ function StageReservationPageContent() {
       )}>
         <div className="max-w-4xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-3 sm:gap-4">
-            <Link href="/reserver" className="shrink-0">
-              <Button variant="outline" size="sm">
-                <ArrowLeft className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Retour</span>
-              </Button>
-            </Link>
+            <div className="shrink-0">
+              {showForm ? (
+                <Button variant="outline" size="sm" onClick={goToStep1}>
+                  <ArrowLeft className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Retour</span>
+                </Button>
+              ) : (
+                <Link href="/reserver">
+                  <Button variant="outline" size="sm">
+                    <ArrowLeft className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Retour</span>
+                  </Button>
+                </Link>
+              )}
+            </div>
             <h1 className="text-base sm:text-xl font-bold text-slate-800 truncate flex-1 text-center sm:text-left">
               Réserver un stage
             </h1>
             <div className="shrink-0">
-              <StepIndicator currentStep={showForm ? 2 : 1} />
+              <StepIndicator currentStep={showForm ? 2 : 1} onGoToStep1={goToStep1} />
             </div>
           </div>
         </div>
