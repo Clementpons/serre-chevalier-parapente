@@ -239,7 +239,14 @@ export function OrdersList() {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">
-                        {order.totalAmount.toFixed(2)}€
+                        <div className="flex items-center gap-1.5">
+                          <span>{(order.totalAmount - (order.promoDiscountAmount || 0)).toFixed(2)}€</span>
+                          {order.promoDiscountAmount > 0 && (
+                            <Badge variant="secondary" className="text-xs px-1 py-0 h-4 bg-purple-100 text-purple-700">
+                              Promo
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge

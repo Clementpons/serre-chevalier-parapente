@@ -106,7 +106,7 @@ const app = new Hono()
                 payments: { some: { status: "SUCCEEDED" } },
               },
             },
-            _sum: { totalPrice: true, depositAmount: true, remainingAmount: true },
+            _sum: { totalPrice: true, depositAmount: true, remainingAmount: true, discountAmount: true },
           }),
           prisma.orderItem.aggregate({
             where: {
@@ -116,7 +116,7 @@ const app = new Hono()
                 payments: { some: { status: "SUCCEEDED" } },
               },
             },
-            _sum: { totalPrice: true, depositAmount: true, remainingAmount: true },
+            _sum: { totalPrice: true, depositAmount: true, remainingAmount: true, discountAmount: true },
           }),
           prisma.orderItem.aggregate({
             where: {
@@ -126,7 +126,7 @@ const app = new Hono()
                 payments: { some: { status: "SUCCEEDED" } },
               },
             },
-            _sum: { totalPrice: true, depositAmount: true, remainingAmount: true },
+            _sum: { totalPrice: true, depositAmount: true, remainingAmount: true, discountAmount: true },
           }),
           prisma.stageBooking.count({ where: { createdAt: { gte: start, lte: end } } }),
           prisma.baptemeBooking.count({ where: { createdAt: { gte: start, lte: end } } }),
@@ -146,14 +146,14 @@ const app = new Hono()
         const manualAmt = manualPaid._sum.amount || 0;
         const totalCollected = onlineAmt + manualAmt;
 
-        const stageCA = stageItemsAgg._sum.totalPrice || 0;
+        const stageCA = (stageItemsAgg._sum.totalPrice || 0) - (stageItemsAgg._sum.discountAmount || 0);
         const stagePending = stageItemsAgg._sum.remainingAmount || 0;
         const stageDeposits = stageItemsAgg._sum.depositAmount || 0;
 
-        const baptemeCA = baptemeItemsAgg._sum.totalPrice || 0;
+        const baptemeCA = (baptemeItemsAgg._sum.totalPrice || 0) - (baptemeItemsAgg._sum.discountAmount || 0);
         const baptemePending = baptemeItemsAgg._sum.remainingAmount || 0;
 
-        const giftCA = giftItemsAgg._sum.totalPrice || 0;
+        const giftCA = (giftItemsAgg._sum.totalPrice || 0) - (giftItemsAgg._sum.discountAmount || 0);
         const giftPending = giftItemsAgg._sum.remainingAmount || 0;
 
         const totalCA = stageCA + baptemeCA + giftCA;

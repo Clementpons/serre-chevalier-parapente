@@ -390,10 +390,12 @@ export function ReservationsList() {
                       (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
                     const isRecent = hoursSinceCreation < 12;
 
-                    // Calcul des montants
+                    // Calcul des montants (effectifs = après réduction promo)
                     const totalPrice = orderItem?.totalPrice || 0;
-                    const depositAmount = orderItem?.depositAmount || 0;
-                    const remainingAmount = orderItem?.remainingAmount || 0;
+                    const promoDiscount = orderItem?.discountAmount || 0;
+                    const effectiveTotal = totalPrice - promoDiscount;
+                    const depositAmount = orderItem?.effectiveDepositAmount ?? orderItem?.depositAmount ?? 0;
+                    const remainingAmount = orderItem?.effectiveRemainingAmount ?? orderItem?.remainingAmount ?? 0;
                     const isFullyPaid = orderItem?.isFullyPaid || false;
                     // Both stages and baptemes can have deposits (bapteme: acompte + video paid upfront)
                     const hasDeposit = depositAmount > 0;
@@ -483,8 +485,8 @@ export function ReservationsList() {
                             <span className="font-medium text-green-600">
                               {formatCurrency(
                                 isFullyPaid
-                                  ? totalPrice
-                                  : totalPrice - remainingAmount
+                                  ? effectiveTotal
+                                  : effectiveTotal - remainingAmount
                               )}
                             </span>
                             {!isFullyPaid && remainingAmount > 0 && (
@@ -501,9 +503,16 @@ export function ReservationsList() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <span className="font-medium">
-                              {formatCurrency(totalPrice)}
-                            </span>
+                            <div className="flex flex-col items-end">
+                              <span className="font-medium">
+                                {formatCurrency(effectiveTotal)}
+                              </span>
+                              {promoDiscount > 0 && (
+                                <span className="text-xs text-purple-600">
+                                  Promo -{formatCurrency(promoDiscount)}
+                                </span>
+                              )}
+                            </div>
                             <ExternalLinkIcon className="h-4 w-4 text-muted-foreground" />
                           </div>
                         </TableCell>
