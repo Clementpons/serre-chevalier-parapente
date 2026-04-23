@@ -3,22 +3,13 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Calendar,
-  Users,
   ChevronRight,
   ChevronLeft,
   Loader2,
   Check,
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -181,134 +172,6 @@ export function initCategoriesFromParam(param: string | null): string[] {
 
 // ─── Bapteme Dialog Content ───────────────────────────────────────────────────
 
-export function BaptemeDialogContent({
-  bapteme,
-  matchingCategories,
-  availability,
-  getBaptemePrice,
-  onSelect,
-  onClose,
-  selectLabel = "Choisir ce créneau",
-}: {
-  bapteme: Bapteme;
-  matchingCategories: string[];
-  availability: AvailData | null | undefined;
-  getBaptemePrice: (cat: string) => number;
-  onSelect: (category: string) => void;
-  onClose: () => void;
-  selectLabel?: string;
-}) {
-  const [dialogCategory, setDialogCategory] = useState<string>(matchingCategories[0] ?? "");
-  const cfg = CATEGORY_CONFIG[dialogCategory];
-  const catInfo = BAPTEME_CATEGORIES.find((c) => c.id === dialogCategory);
-  const isAvailable = availability?.available ?? (bapteme.availablePlaces > 0);
-  const availablePlaces = availability?.availablePlaces ?? bapteme.availablePlaces;
-  const availLoading = availability === undefined;
-  const price = getBaptemePrice(dialogCategory);
-
-  return (
-    <>
-      <DialogHeader>
-        <DialogTitle className="flex items-center gap-2 text-xl">
-          {cfg && <span className={cn("inline-block w-3 h-3 rounded-sm shrink-0", cfg.bgBar)} />}
-          Baptême de parapente
-        </DialogTitle>
-        <DialogDescription className="text-sm text-slate-500">
-          {formatDateFull(bapteme.date)} à {formatTime(bapteme.date)}
-        </DialogDescription>
-      </DialogHeader>
-
-      <div className="space-y-4 mt-3">
-        {/* Category selector (if multiple categories match) */}
-        {matchingCategories.length > 1 && (
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-slate-600 uppercase">Formule</p>
-            <div className="space-y-2">
-              {matchingCategories.map((catId) => {
-                const c = CATEGORY_CONFIG[catId];
-                const ci = BAPTEME_CATEGORIES.find((x) => x.id === catId);
-                const isSelected = dialogCategory === catId;
-                return (
-                  <button
-                    key={catId}
-                    type="button"
-                    onClick={() => setDialogCategory(catId)}
-                    className={cn(
-                      "w-full flex items-center gap-3 p-3 rounded-lg border-2 text-left transition-all",
-                      isSelected ? `${c?.borderClass} ${c?.bgLight}` : "border-slate-200 hover:border-slate-300",
-                    )}
-                  >
-                    <div className={cn(
-                      "w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
-                      isSelected ? `${c?.dotClass} border-transparent` : "border-slate-300",
-                    )}>
-                      {isSelected && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={cn("font-semibold text-sm", isSelected ? c?.textClass : "text-slate-700")}>
-                        {ci?.name}
-                      </p>
-                      <p className="text-xs text-slate-500">{ci?.durationLabel} de vol</p>
-                    </div>
-                    <span className={cn("font-bold text-sm shrink-0", isSelected ? c?.textClass : "text-slate-700")}>
-                      {getBaptemePrice(catId)}€
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Info grid */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-slate-50 rounded-xl p-3">
-            <p className="text-xs text-slate-500 font-medium uppercase mb-1">Durée de vol</p>
-            <p className="text-sm font-semibold text-slate-800">
-              {catInfo?.durationLabel ?? `${bapteme.duration} min`}
-            </p>
-          </div>
-          <div className="bg-slate-50 rounded-xl p-3 text-right">
-            <p className="text-xs text-slate-500 font-medium uppercase mb-1">Prix</p>
-            <p className="font-bold text-2xl text-blue-600">{price}€</p>
-          </div>
-        </div>
-
-        {/* Places */}
-        <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl">
-          <Users className="w-4 h-4 text-slate-400 shrink-0" />
-          {availLoading ? (
-            <span className="text-sm text-slate-400 flex items-center gap-1.5">
-              <Loader2 className="w-3 h-3 animate-spin" /> Vérification des disponibilités…
-            </span>
-          ) : (
-            <Badge variant={isAvailable ? "default" : "destructive"}>
-              {isAvailable
-                ? `${availablePlaces} place${availablePlaces > 1 ? "s" : ""} disponible${availablePlaces > 1 ? "s" : ""}`
-                : "Complet — aucune place disponible"}
-            </Badge>
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={onClose} className="flex-1">
-            Retour
-          </Button>
-          <Button
-            onClick={() => onSelect(dialogCategory)}
-            disabled={!isAvailable || availLoading || !dialogCategory}
-            className="flex-1 gap-2"
-          >
-            {selectLabel}
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-    </>
-  );
-}
-
 // ─── Bapteme Calendar ─────────────────────────────────────────────────────────
 
 export function BaptemeCalendar({
@@ -318,7 +181,6 @@ export function BaptemeCalendar({
   onBaptemesAccumulated,
   getBaptemePrice,
   onViewDateChange,
-  selectLabel,
 }: {
   selectedCategories: string[];
   onSlotSelect: (slot: Bapteme, category: string) => void;
@@ -326,7 +188,6 @@ export function BaptemeCalendar({
   onBaptemesAccumulated: (baptemes: Bapteme[]) => void;
   getBaptemePrice: (cat: string) => number;
   onViewDateChange?: (date: Date) => void;
-  selectLabel?: string;
 }) {
   const today = useMemo(() => {
     const d = new Date();
@@ -339,7 +200,6 @@ export function BaptemeCalendar({
   const [viewDate, setViewDate] = useState<Date>(
     () => new Date(today.getFullYear(), today.getMonth(), 1),
   );
-  const [dialogBapteme, setDialogBapteme] = useState<Bapteme | null>(null);
   const [hoveredSlotKey, setHoveredSlotKey] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
   const [tooltipData, setTooltipData] = useState<{
@@ -668,7 +528,7 @@ export function BaptemeCalendar({
                     <button
                       key={`${slot.bapteme.id}-${si}`}
                       type="button"
-                      onClick={() => setDialogBapteme(slot.bapteme)}
+                      onClick={() => { if (isAvail) onSlotSelect(slot.bapteme, slot.primaryCategory); }}
                       onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
                       onMouseEnter={() => {
                         setHoveredSlotKey(slotKey);
@@ -706,9 +566,12 @@ export function BaptemeCalendar({
                         {cfg?.shortLabel ?? slot.primaryCategory}
                         {" "}
                         <span className="font-normal opacity-70">{formatTime(slot.bapteme.date)}</span>
+                        <span className="font-normal opacity-80">
+                          {" — "}{getBaptemePrice(slot.primaryCategory)}€
+                        </span>
                         {avail !== undefined && (
-                          <span className="font-normal opacity-80">
-                            {isAvail ? ` — ${places}p` : " — Complet"}
+                          <span className="font-normal opacity-70">
+                            {isAvail ? ` · ${places}p` : " · Complet"}
                           </span>
                         )}
                       </span>
@@ -759,31 +622,6 @@ export function BaptemeCalendar({
           </p>
         )}
       </div>
-
-      {/* Bapteme detail dialog */}
-      <Dialog
-        open={!!dialogBapteme}
-        onOpenChange={(open) => { if (!open) setDialogBapteme(null); }}
-      >
-        <DialogContent className="sm:max-w-sm">
-          {dialogBapteme && (
-            <BaptemeDialogContent
-              bapteme={dialogBapteme}
-              matchingCategories={
-                selectedCategories.filter((c) => dialogBapteme.categories.includes(c))
-              }
-              availability={availabilityMap[dialogBapteme.id]}
-              getBaptemePrice={getBaptemePrice}
-              selectLabel={selectLabel}
-              onSelect={(category) => {
-                onSlotSelect(dialogBapteme, category);
-                setDialogBapteme(null);
-              }}
-              onClose={() => setDialogBapteme(null)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Mouse-following tooltip portal */}
       {tooltipData && mousePos && createPortal(

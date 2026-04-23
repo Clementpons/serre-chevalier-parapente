@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { StagePriceBadge } from "@/components/price/StagePriceBadge";
+import StageCalendarWidget from "@/components/stages/StageCalendarWidget";
 
 export async function generateMetadata() {
   return {
@@ -37,7 +38,7 @@ export default function NosStagesPage() {
     <>
       {/* Hero Header with H1 */}
       <section>
-        <div className="bg-slate-900 h-[85svh] overflow-hidden relative flex items-end pb-24 md:pb-16 px-4 lg:px-36 xl:px-48">
+        <div className="bg-slate-900 h-[80svh] overflow-hidden relative flex items-end pb-24 md:pb-16 px-4 lg:px-36 xl:px-48">
           <Image
             src="/placeholder/hero.webp"
             alt="Vol en parapente au dessus de la Valée de Serre Chevalier Briançon"
@@ -84,268 +85,300 @@ export default function NosStagesPage() {
           </div>
         </div>
       </section>
-      {/*  Section infos  */}
-      <section className="mx-4 lg:mx-36 xl:mx-48 mt-8 lg:mt-16">
-        <div className="flex flex-col lg:flex-row mb-8 gap-4 lg:gap-8">
-          <div className="inline-flex lg:flex items-center gap-2 justify-center lg:justify-start bg-slate-100 hover:bg-slate-200 hover:cursor-pointer transition rounded-lg p-3 lg:p-4">
-            <LucideUsersRound className="text-slate-900 size-4 lg:size-6" />
-            <p className="text-balance text-center text-sm lg:text-normal">À partir de 12 ans</p>
-          </div>
-          <div className="inline-flex lg:flex items-center gap-2 justify-center lg:justify-start bg-slate-100 hover:bg-slate-200 hover:cursor-pointer transition rounded-lg p-3 lg:p-4">
-            <LucideDumbbell className="text-slate-900 size-4 lg:size-6" />
-            <p className="text-balance text-center text-sm lg:text-normal">Jusqu&apos;à 105kg</p>
-          </div>
-          <div className="inline-flex lg:flex items-center gap-2 justify-center lg:justify-start bg-slate-100 hover:bg-slate-200 hover:cursor-pointer transition rounded-lg p-3 lg:p-4">
-            <LucideClock8 className="text-slate-900 size-4 lg:size-6" />
-            <p className="text-balance text-center text-sm lg:text-normal">
-              5 jours : du Dimanche au Jeudi
+
+      {/* ── Mobile calendar (between hero and content, hidden on desktop) ── */}
+      <div className="block lg:hidden px-4 mt-8">
+        <StageCalendarWidget stageType="PROGRESSION" />
+      </div>
+
+      {/* ── Two-column layout: content left / calendar sticky right ── */}
+      <div className="px-4 lg:px-8 xl:px-48 mt-8 lg:mt-16">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 xl:gap-32">
+
+          {/* Left column: page content */}
+          <div className="min-w-0">
+
+            {/* Blocs infos */}
+            <div className="flex flex-col lg:flex-row mb-8 gap-4 lg:gap-8 flex-wrap">
+              <div className="inline-flex lg:flex items-center gap-2 justify-center lg:justify-start bg-slate-100 hover:bg-slate-200 hover:cursor-pointer transition rounded-lg p-3 lg:p-4">
+                <LucideUsersRound className="text-slate-900 size-4 lg:size-6" />
+                <p className="text-balance text-center text-sm lg:text-normal">À partir de 12 ans</p>
+              </div>
+              <div className="inline-flex lg:flex items-center gap-2 justify-center lg:justify-start bg-slate-100 hover:bg-slate-200 hover:cursor-pointer transition rounded-lg p-3 lg:p-4">
+                <LucideDumbbell className="text-slate-900 size-4 lg:size-6" />
+                <p className="text-balance text-center text-sm lg:text-normal">Jusqu&apos;à 105kg</p>
+              </div>
+              <div className="inline-flex lg:flex items-center gap-2 justify-center lg:justify-start bg-slate-100 hover:bg-slate-200 hover:cursor-pointer transition rounded-lg p-3 lg:p-4">
+                <LucideClock8 className="text-slate-900 size-4 lg:size-6" />
+                <p className="text-balance text-center text-sm lg:text-normal">
+                  5 jours : du Dimanche au Jeudi
+                </p>
+              </div>
+              <div className="inline-flex lg:flex items-center gap-2 justify-center lg:justify-start bg-slate-100 hover:bg-slate-200 hover:cursor-pointer transition rounded-lg p-3 lg:p-4">
+                <LucideCloudRainWind className="text-slate-900 size-4 lg:size-6" />
+                <p className="text-balance text-center text-sm lg:text-normal">
+                  Extension / Report en cas de mauvais temps
+                </p>
+              </div>
+            </div>
+
+            <h2 className="font-bold text-2xl text-slate-800">
+              A qui s'adresse ce stage progression ?
+            </h2>
+            <p className="text-slate-800 mt-4">
+              Le <strong>stage progression de Serre Chevalier Parapente</strong>{" "}
+              s'adresse aux pilotes ayant déjà effectué un{" "}
+              <strong>stage initiation</strong> ou ayant acquis une première
+              expérience en vol. Il est idéal pour ceux qui souhaitent{" "}
+              <span className="font-bold">gagner en autonomie</span>, perfectionner
+              leur pilotage et commencer à exploiter les ascendances pour prolonger
+              leur temps de vol. Ce stage s'adresse aussi bien aux élèves en quête
+              de confiance qu'aux futurs pilotes cherchant à préparer leur brevet
+              initial.
             </p>
+
+            {/* Quel est l'objectif du stage progression ? */}
+            <section className="mt-12 lg:mt-16">
+              <h2 className="font-bold text-2xl text-slate-800">
+                Quel est l'objectif du stage progression ?
+              </h2>
+              <p className="text-slate-800 mt-4">
+                L'objectif principal de ce stage est de vous{" "}
+                <strong>faire progresser vers l'autonomie en vol</strong>, en vous
+                permettant de maîtriser les différentes phases du vol : décollage,
+                gestion de trajectoire, pilotage actif et atterrissage précis. Vous
+                apprendrez également à <strong>lire l'aérologie</strong> et à
+                exploiter les conditions thermiques pour{" "}
+                <strong>gagner en hauteur et en durée de vol</strong>, tout en
+                assurant votre sécurité.
+              </p>
+            </section>
+
+            {/* Quel est le programme du stage progression ? */}
+            <section className="mt-12 lg:mt-16">
+              <h2 className="font-bold text-2xl text-slate-800">
+                Quel est le programme du stage progression ?
+              </h2>
+              <p className="text-slate-800 mt-4">
+                Le programme consiste à améliorer la technique de décollage dans un
+                premier temps en pente école afin de concentrer le reste du stage sur
+                l'atterrissage et la gestion du plan de vol. La matiné est dédié à la
+                pratique et l&apos;après midi aux apports théorique (Débrifing vidéo,
+                cours théorique et notion de base, Seance portique pour travailler la
+                gestuelle en vol et corriger les postures). Le RDV du matin et a 8h au
+                local et nous revenon a 12h pour prendre une pause pour manger, la
+                séance théorique est de 14h a 16h.
+              </p>
+              <p className="text-slate-800 mt-4">
+                Le stage se déroule sur{" "}
+                <strong>
+                  5 jours de pratique répartis sur 7 jours de disponibilité
+                </strong>
+                , pour optimiser les meilleures conditions météo.
+              </p>
+              <ul className="mt-4">
+                <li className="list-disc list-inside">
+                  <span className="font-bold">Jour 1 & 2 : </span>Analyse des
+                  conditions météo et exercices de gonflage au sol pour perfectionner
+                  la gestion du décollage.
+                </li>
+                <li className="list-disc list-inside">
+                  <span className="font-bold">Jour 3, 4 & 5 : </span>Enchaînement de
+                  vols guidés par radio, avec un travail spécifique sur les
+                  trajectoires, les approches et gestion des mouvements de tangage et
+                  de roulis.
+                </li>
+                <li className="list-disc list-inside">
+                  <span className="font-bold">
+                    Débriefing quotidien en après- midi :{" "}
+                  </span>
+                  pour analyser vidéo de vos décollage et faire les apport théorique.
+                </li>
+              </ul>
+            </section>
+
+            {/* Quels sont le pré-requis pour le stage progression ? */}
+            <section className="mt-12 lg:mt-16">
+              <h2 className="font-bold text-2xl text-slate-800">
+                Quels sont le pré-requis pour le stage progression ?
+              </h2>
+              <p className="text-slate-800 mt-4">
+                Pour accéder au stage progression, il est nécessaire d'avoir déjà
+                réalisé un <strong>stage initiation</strong> ou d'avoir une expérience
+                équivalente en vol. Vous devez également être capable de décoller et
+                d'atterrir en autonomie sous la supervision d'un moniteur. Une bonne
+                condition physique et une envie de progresser sont également
+                essentielles.
+              </p>
+            </section>
+
+            {/* Où a lieu le stage de progression ? */}
+            <section className="mt-12 lg:mt-16">
+              <h2 className="font-bold text-2xl text-slate-800">
+                Où a lieu le stage de progression ?
+              </h2>
+              <p className="text-slate-800 mt-4">
+                Le <strong>stage progression</strong> de{" "}
+                <strong>Serre Chevalier Parapente</strong> se déroule dans un cadre
+                exceptionnel, au cœur des <strong>Hautes-Alpes</strong>, à{" "}
+                <strong>Briançon</strong>, dans la magnifique vallée de{" "}
+                <strong>Serre Chevalier</strong> au porte des écrins. L&apos;école est
+                idéalement située pour accéder à des pentes douces et sécurisées,
+                parfaites pour l&apos;apprentissage du décollage et des premiers vols.
+                Nous utilisons notamment des{" "}
+                <strong>pentes écoles situées à Briançon</strong> même, au{" "}
+                <strong>col du Granon</strong>, <strong>col du Lautaret</strong> et{" "}
+                <strong>col du Galibier</strong> offrant des conditions idéales pour
+                progresser en toute sécurité. Les grands vols se déroulent ensuite sur
+                des sites emblématiques comme le <strong>col du Granon</strong> ou
+                encore le <strong>col du Prorel</strong>, offrant des panoramas à
+                couper le souffle.
+              </p>
+            </section>
+
+            {/* Quel est le déroulement d'un stage progression ? */}
+            <section className="mt-12 lg:mt-16">
+              <h2 className="font-bold text-2xl text-slate-800">
+                Quel est le déroulement d'un stage progression chez Serre Chevalier
+                Parapente ?
+              </h2>
+              <p className="text-slate-800 mt-4">
+                Le <strong>Stage Progression</strong> chez{" "}
+                <strong>Serre Chevalier Parapente</strong> est conçu pour
+                <strong>
+                  vous faire passer du statut de débutant à celui de pilote en devenir
+                </strong>
+                , capable de gérer vos vols de manière plus autonome et de commencer à
+                exploiter les ascendances pour prolonger vos vols.
+              </p>
+              <p className="text-slate-800 mt-4">
+                Fort de notre{" "}
+                <strong>
+                  expérience pédagogique et de notre passion pour l&apos;enseignement
+                </strong>
+                , nous avons élaboré un{" "}
+                <strong>cheminement progressif et personnalisé</strong>, basé sur{" "}
+                <strong>l&apos;écoute de chaque stagiaire</strong> et sur{" "}
+                <strong>
+                  un accompagnement adapté à votre rythme d&apos;apprentissage
+                </strong>
+                . Nous nous inspirons également de méthodes issues d&apos;autres
+                sports aériens et de montagne pour vous aider à{" "}
+                <strong>gagner en confiance et en maîtrise technique</strong>.
+              </p>
+              <p className="text-slate-800 mt-4">
+                Dès le premier jour, nous faisons un{" "}
+                <strong>
+                  bilan de votre expérience acquise lors du stage initiation
+                </strong>{" "}
+                ou lors de vos premiers vols, afin d&apos;identifier vos points forts
+                et les axes à améliorer. L&apos;objectif est de{" "}
+                <strong>
+                  vous amener progressivement à voler avec plus d&apos;aisance
+                </strong>
+                , tout en prenant des décisions par vous-même.
+              </p>
+              <p className="text-slate-800 mt-4">
+                Le déroulement du stage suit une progression étape par étape :
+              </p>
+              <ul className="mt-4">
+                <li className="list-disc list-inside">
+                  Améliorer votre gestuelle au sol pour des décollages plus fluides.
+                </li>
+                <li className="list-disc list-inside">
+                  Affiner votre pilotage en l&apos;air : gestion de la trajectoire,
+                  maîtrise des virages et optimisation de votre plan de vol.
+                </li>
+                <li className="list-disc list-inside">
+                  Comprendre et exploiter les ascendances pour allonger vos vols.
+                </li>
+                <li className="list-disc list-inside">
+                  Apprendre à analyser les conditions aérologiques et à prendre des
+                  décisions en fonction de votre niveau de compétence.
+                </li>
+                <li className="list-disc list-inside">
+                  Gérer vos émotions et votre mental pour voler en confiance.
+                </li>
+              </ul>
+              <p className="text-slate-800 mt-4">
+                Grâce à une <strong>progression adaptée et encadrée par radio</strong>
+                , nous vous responsabilisons progressivement sur votre{" "}
+                <strong>prise de décision</strong> et votre
+                <strong>gestion de la sécurité en vol</strong>, afin que vous puissiez{" "}
+                <strong>
+                  gagner en autonomie tout en prenant un maximum de plaisir
+                </strong>
+                .
+              </p>
+            </section>
+
+            {/* Quels sont les engagements de l'école ? */}
+            <section className="mt-12 lg:mt-16 pb-8 lg:pb-16">
+              <h2 className="font-bold text-2xl text-slate-800">
+                Quels sont les engagements de l'école ?
+              </h2>
+              <p className="text-slate-800 mt-4">
+                Chez <strong>Serre Chevalier Parapente</strong>, notre engagement est
+                simple :{" "}
+                <span className="font-bold">
+                  vous accompagner vers l'autonomie en vol, en toute sécurité et avec
+                  un maximum de plaisir
+                </span>
+                .
+              </p>
+              <ul className="mt-4">
+                <li className="list-disc list-inside">
+                  <span className="font-bold">La sécurité avant tout :</span> Nous
+                  assurons un encadrement personnalisé avec des moniteurs diplômés
+                  d'État durant votre décollage et votre atterissage, une analyse météo rigoureuse et du matériel récent et
+                  contrôlé. Chaque vol est guidé par radio pour vous permettre de
+                  progresser sereinement.
+                </li>
+                <li className="list-disc list-inside">
+                  <span className="font-bold">Un enseignement sur-mesure :</span> Nous
+                  adaptons notre pédagogie à votre niveau et à vos objectifs. Que vous
+                  souhaitiez gagner en confiance, perfectionner votre technique ou
+                  préparer votre brevet initial, nous vous apportons les clés pour
+                  évoluer à votre rythme.
+                </li>
+                <li className="list-disc list-inside">
+                  <span className="font-bold">
+                    Un cadre exceptionnel pour progresser :
+                  </span>{" "}
+                  Grâce à la diversité de nos sites de vol dans la vallée de Serre
+                  Chevalier, nous vous offrons des conditions idéales pour explorer le
+                  vol thermique et la gestion de l&apos;altitude.
+                </li>
+                <li className="list-disc list-inside">
+                  <span className="font-bold">Un suivi humain et bienveillant :</span>{" "}
+                  Nous créons une ambiance conviviale et motivante pour que chaque
+                  élève se sente en confiance et prenne du plaisir à progresser.
+                </li>
+              </ul>
+              <p className="text-slate-800 mt-4">
+                Notre mission :{" "}
+                <span className="font-bold">
+                  vous transmettre notre passion pour le parapente tout en vous
+                  rendant autonome et confiant dans votre pratique.
+                </span>
+              </p>
+            </section>
+
+          </div>{/* end left column */}
+
+          {/* Right column: sticky calendar */}
+          <div className="hidden lg:block">
+            <div className="sticky top-[10vh]">
+              <StageCalendarWidget stageType="PROGRESSION" />
+            </div>
           </div>
-          <div className="inline-flex lg:flex items-center gap-2 justify-center lg:justify-start bg-slate-100 hover:bg-slate-200 hover:cursor-pointer transition rounded-lg p-3 lg:p-4">
-            <LucideCloudRainWind className="text-slate-900 size-4 lg:size-6" />
-            <p className="text-balance text-center text-sm lg:text-normal">
-              Extension / Report en cas de mauvais temps
-            </p>
-          </div>
+
         </div>
-        <h2 className="font-bold text-2xl text-slate-800">
-          A qui s’adresse ce stage progression ?
-        </h2>
-        <p className="text-slate-800 mt-4">
-          Le <strong>stage progression de Serre Chevalier Parapente</strong>{" "}
-          s’adresse aux pilotes ayant déjà effectué un{" "}
-          <strong>stage initiation</strong> ou ayant acquis une première
-          expérience en vol. Il est idéal pour ceux qui souhaitent{" "}
-          <span className="font-bold">gagner en autonomie</span>, perfectionner
-          leur pilotage et commencer à exploiter les ascendances pour prolonger
-          leur temps de vol. Ce stage s’adresse aussi bien aux élèves en quête
-          de confiance qu’aux futurs pilotes cherchant à préparer leur brevet
-          initial.
-        </p>
-      </section>
-      {/* Quel est l’objectif du stage progression ? */}
-      <section className="mx-4 mt-16 lg:mx-36 xl:mx-48 lg:mt-24">
-        <h2 className="font-bold text-2xl text-slate-800">
-          Quel est l’objectif du stage progression ?
-        </h2>
-        <p className="text-slate-800 mt-4">
-          L’objectif principal de ce stage est de vous{" "}
-          <strong>faire progresser vers l’autonomie en vol</strong>, en vous
-          permettant de maîtriser les différentes phases du vol : décollage,
-          gestion de trajectoire, pilotage actif et atterrissage précis. Vous
-          apprendrez également à <strong>lire l’aérologie</strong> et à
-          exploiter les conditions thermiques pour{" "}
-          <strong>gagner en hauteur et en durée de vol</strong>, tout en
-          assurant votre sécurité.
-        </p>
-      </section>
-      {/* Quel est le programme du stage progression ? */}
-      <section className="mx-4 mt-16 lg:mx-36 xl:mx-48 lg:mt-24">
-        <h2 className="font-bold text-2xl text-slate-800">
-          Quel est le programme du stage progression ?
-        </h2>
-        <p className="text-slate-800 mt-4">
-          Le programme consiste à améliorer la technique de décollage dans un
-          premier temps en pente école afin de concentrer le reste du stage sur
-          l’atterrissage et la gestion du plan de vol. La matiné est dédié à la
-          pratique et l&apos;après midi aux apports théorique (Débrifing vidéo,
-          cours théorique et notion de base, Seance portique pour travailler la
-          gestuelle en vol et corriger les postures). Le RDV du matin et a 8h au
-          local et nous revenon a 12h pour prendre une pause pour manger, la
-          séance théorique est de 14h a 16h.
-        </p>
-        <p className="text-slate-800 mt-4">
-          Le stage se déroule sur{" "}
-          <strong>
-            5 jours de pratique répartis sur 7 jours de disponibilité
-          </strong>
-          , pour optimiser les meilleures conditions météo.
-        </p>
-        <ul className="mt-4">
-          <li className="list-disc list-inside">
-            <span className="font-bold">Jour 1 & 2 : </span>Analyse des
-            conditions météo et exercices de gonflage au sol pour perfectionner
-            la gestion du décollage.
-          </li>
-          <li className="list-disc list-inside">
-            <span className="font-bold">Jour 3, 4 & 5 : </span>Enchaînement de
-            vols guidés par radio, avec un travail spécifique sur les
-            trajectoires, les approches et gestion des mouvements de tangage et
-            de roulis.
-          </li>
-          <li className="list-disc list-inside">
-            <span className="font-bold">
-              Débriefing quotidien en après- midi :{" "}
-            </span>
-            pour analyser vidéo de vos décollage et faire les apport théorique.
-          </li>
-        </ul>
-      </section>
-      {/* Quels sont le pré-requis pour le stage initiation ? */}
-      <section className="mx-4 mt-16 lg:mx-36 xl:mx-48 lg:mt-24">
-        <h2 className="font-bold text-2xl text-slate-800">
-          Quels sont le pré-requis pour le stage progression ?
-        </h2>
-        <p className="text-slate-800 mt-4">
-          Pour accéder au stage progression, il est nécessaire d’avoir déjà
-          réalisé un <strong>stage initiation</strong> ou d’avoir une expérience
-          équivalente en vol. Vous devez également être capable de décoller et
-          d’atterrir en autonomie sous la supervision d’un moniteur. Une bonne
-          condition physique et une envie de progresser sont également
-          essentielles.
-        </p>
-      </section>
-      {/* Où a lieu le stage d’initiation ? */}
-      <section className="mx-4 mt-16 lg:mx-36 xl:mx-48 lg:mt-24">
-        <h2 className="font-bold text-2xl text-slate-800">
-          Où a lieu le stage de progression ?
-        </h2>
-        <p className="text-slate-800 mt-4">
-          Le <strong>stage progression</strong> de{" "}
-          <strong>Serre Chevalier Parapente</strong> se déroule dans un cadre
-          exceptionnel, au cœur des <strong>Hautes-Alpes</strong>, à{" "}
-          <strong>Briançon</strong>, dans la magnifique vallée de{" "}
-          <strong>Serre Chevalier</strong> au porte des écrins. L&apos;école est
-          idéalement située pour accéder à des pentes douces et sécurisées,
-          parfaites pour l&apos;apprentissage du décollage et des premiers vols.
-          Nous utilisons notamment des{" "}
-          <strong>pentes écoles situées à Briançon</strong> même, au{" "}
-          <strong>col du Granon</strong>, <strong>col du Lautaret</strong> et{" "}
-          <strong>col du Galibier</strong> offrant des conditions idéales pour
-          progresser en toute sécurité. Les grands vols se déroulent ensuite sur
-          des sites emblématiques comme le <strong>col du Granon</strong> ou
-          encore le <strong>col du Prorel</strong>, offrant des panoramas à
-          couper le souffle.
-        </p>
-      </section>
-      {/* Quel est le déroulement d’un stage progression chez Serre Chevalier Parapente ? */}
-      <section className="mx-4 mt-16 lg:mx-36 xl:mx-48 lg:mt-24">
-        <h2 className="font-bold text-2xl text-slate-800">
-          Quel est le déroulement d’un stage progression chez Serre Chevalier
-          Parapente ?
-        </h2>
-        <p className="text-slate-800 mt-4">
-          Le <strong>Stage Progression</strong> chez{" "}
-          <strong>Serre Chevalier Parapente</strong> est conçu pour
-          <strong>
-            vous faire passer du statut de débutant à celui de pilote en devenir
-          </strong>
-          , capable de gérer vos vols de manière plus autonome et de commencer à
-          exploiter les ascendances pour prolonger vos vols.
-        </p>
-        <p className="text-slate-800 mt-4">
-          Fort de notre{" "}
-          <strong>
-            expérience pédagogique et de notre passion pour l&apos;enseignement
-          </strong>
-          , nous avons élaboré un{" "}
-          <strong>cheminement progressif et personnalisé</strong>, basé sur{" "}
-          <strong>l&apos;écoute de chaque stagiaire</strong> et sur{" "}
-          <strong>
-            un accompagnement adapté à votre rythme d&apos;apprentissage
-          </strong>
-          . Nous nous inspirons également de méthodes issues d&apos;autres
-          sports aériens et de montagne pour vous aider à{" "}
-          <strong>gagner en confiance et en maîtrise technique</strong>.
-        </p>
-        <p className="text-slate-800 mt-4">
-          Dès le premier jour, nous faisons un{" "}
-          <strong>
-            bilan de votre expérience acquise lors du stage initiation
-          </strong>{" "}
-          ou lors de vos premiers vols, afin d&apos;identifier vos points forts
-          et les axes à améliorer. L&apos;objectif est de{" "}
-          <strong>
-            vous amener progressivement à voler avec plus d&apos;aisance
-          </strong>
-          , tout en prenant des décisions par vous-même.
-        </p>
-        <p className="text-slate-800 mt-4">
-          Le déroulement du stage suit une progression étape par étape :
-        </p>
-        <ul className="mt-4">
-          <li className="list-disc list-inside">
-            Améliorer votre gestuelle au sol pour des décollages plus fluides.
-          </li>
-          <li className="list-disc list-inside">
-            Affiner votre pilotage en l&apos;air : gestion de la trajectoire,
-            maîtrise des virages et optimisation de votre plan de vol.
-          </li>
-          <li className="list-disc list-inside">
-            Comprendre et exploiter les ascendances pour allonger vos vols.
-          </li>
-          <li className="list-disc list-inside">
-            Apprendre à analyser les conditions aérologiques et à prendre des
-            décisions en fonction de votre niveau de compétence.
-          </li>
-          <li className="list-disc list-inside">
-            Gérer vos émotions et votre mental pour voler en confiance.
-          </li>
-        </ul>
-        <p className="text-slate-800 mt-4">
-          Grâce à une <strong>progression adaptée et encadrée par radio</strong>
-          , nous vous responsabilisons progressivement sur votre{" "}
-          <strong>prise de décision</strong> et votre
-          <strong>gestion de la sécurité en vol</strong>, afin que vous puissiez{" "}
-          <strong>
-            gagner en autonomie tout en prenant un maximum de plaisir
-          </strong>
-          .
-        </p>
-      </section>
-      {/* Quels sont les engagements de l’école ? */}
-      <section className="mx-4 mt-16 lg:mx-36 xl:mx-48 lg:mt-24">
-        <h2 className="font-bold text-2xl text-slate-800">
-          Quels sont les engagements de l’école ?
-        </h2>
-        <p className="text-slate-800 mt-4">
-          Chez <strong>Serre Chevalier Parapente</strong>, notre engagement est
-          simple :{" "}
-          <span className="font-bold">
-            vous accompagner vers l’autonomie en vol, en toute sécurité et avec
-            un maximum de plaisir
-          </span>
-          .
-        </p>
-        <ul className="mt-4">
-          <li className="list-disc list-inside">
-            <span className="font-bold">La sécurité avant tout :</span> Nous
-            assurons un encadrement personnalisé avec des moniteurs diplômés
-            d’État durant votre décollage et votre atterissage, une analyse météo rigoureuse et du matériel récent et
-            contrôlé. Chaque vol est guidé par radio pour vous permettre de
-            progresser sereinement.
-          </li>
-          <li className="list-disc list-inside">
-            <span className="font-bold">Un enseignement sur-mesure :</span> Nous
-            adaptons notre pédagogie à votre niveau et à vos objectifs. Que vous
-            souhaitiez gagner en confiance, perfectionner votre technique ou
-            préparer votre brevet initial, nous vous apportons les clés pour
-            évoluer à votre rythme.
-          </li>
-          <li className="list-disc list-inside">
-            <span className="font-bold">
-              Un cadre exceptionnel pour progresser :
-            </span>{" "}
-            Grâce à la diversité de nos sites de vol dans la vallée de Serre
-            Chevalier, nous vous offrons des conditions idéales pour explorer le
-            vol thermique et la gestion de l&apos;altitude.
-          </li>
-          <li className="list-disc list-inside">
-            <span className="font-bold">Un suivi humain et bienveillant :</span>{" "}
-            Nous créons une ambiance conviviale et motivante pour que chaque
-            élève se sente en confiance et prenne du plaisir à progresser.
-          </li>
-        </ul>
-        <p className="text-slate-800 mt-4">
-          Notre mission :{" "}
-          <span className="font-bold">
-            vous transmettre notre passion pour le parapente tout en vous
-            rendant autonome et confiant dans votre pratique.
-          </span>
-        </p>
-      </section>
-      {/* NOS MONITEURS */}
+      </div>{/* end two-column wrapper / sticky boundary */}
+
+      {/* NOS MONITEURS — full width, outside the two-column layout */}
       <TeamSection title="Nos Moniteurs" />
+
       {/*  Pourquoi faire votre Stage Progression chez Serre Chevalier Parapente ?   */}
       <section className="mx-4 mt-16 lg:mx-36 xl:mx-48 lg:mt-24">
         <h2 className="font-bold text-2xl text-slate-800">
@@ -355,12 +388,12 @@ export default function NosStagesPage() {
         <p className="text-slate-800 mt-4">
           Faire votre{" "}
           <strong>Stage Progression chez Serre Chevalier Parapente</strong>,
-          c’est choisir une <strong>école passionnée</strong> et{" "}
+          c'est choisir une <strong>école passionnée</strong> et{" "}
           <strong>
-            engagée dans votre progression vers l’autonomie en vol
+            engagée dans votre progression vers l'autonomie en vol
           </strong>
           . Située au cœur du <strong>Briançonnais</strong>, notre école
-          bénéficie d’un <strong>terrain de jeu exceptionnel</strong>, entre une
+          bénéficie d'un <strong>terrain de jeu exceptionnel</strong>, entre une
           grande variété de pente école et de site de vol qui est un outil
           pédagogique exceptionnel pour Serre Chevalier Parapente. aucunement
           besoin de faire des kilometre pour trouver un nouveau site et
@@ -370,17 +403,17 @@ export default function NosStagesPage() {
         </p>
         <p className="text-slate-800 mt-2">
           Notre <strong>approche pédagogique est 100% personnalisée</strong>,
-          adaptée à votre niveau et à vos objectifs. Grâce à l’encadrement
-          bienveillant et à l’expérience de nos moniteurs diplômés d’État, vous
+          adaptée à votre niveau et à vos objectifs. Grâce à l'encadrement
+          bienveillant et à l'expérience de nos moniteurs diplômés d'État, vous
           évoluez en toute
           <strong>sécurité</strong>, avec des conseils précis pour perfectionner
-          votre pilotage et commencer à lire l’aérologie.
+          votre pilotage et commencer à lire l'aérologie.
         </p>
         <p className="text-slate-800 mt-2">
-          Chez Serre Chevalier Parapente, nous mettons un point d’honneur à
-          créer une <strong>ambiance conviviale et humaine</strong>, où l’on
+          Chez Serre Chevalier Parapente, nous mettons un point d'honneur à
+          créer une <strong>ambiance conviviale et humaine</strong>, où l'on
           apprend sérieusement sans jamais oublier le plaisir de voler.
-          L’objectif de ce stage ? <strong>Vous rendre autonome</strong>,
+          L'objectif de ce stage ? <strong>Vous rendre autonome</strong>,
           confiant et prêt à profiter pleinement de chaque vol libre, en
           montagne ou ailleurs.
         </p>
@@ -393,16 +426,17 @@ export default function NosStagesPage() {
           </div>
         </div>
       </section>
-      {/*  Est-ce que la pédagogie et la sécurité est importante pour Serre Chevalier Parapente, dans le cadre d’une stage Progression ?  */}
+
+      {/*  Est-ce que la pédagogie et la sécurité est importante pour Serre Chevalier Parapente, dans le cadre d'une stage Progression ?  */}
       <section className="mx-4 my-16 lg:mx-36 xl:mx-48 lg:my-24">
         <h2 className="font-bold text-2xl text-slate-800">
           Est-ce que la pédagogie et la sécurité est importante pour Serre
-          Chevalier Parapente, dans le cadre d’une stage Progression ?
+          Chevalier Parapente, dans le cadre d'une stage Progression ?
         </h2>
         <p className="text-slate-800 mt-4">
           Chez <strong>Serre Chevalier Parapente</strong>, la{" "}
           <strong>sécurité</strong> et la <strong>pédagogie</strong> sont
-          essentielles pour permettre à chaque élève d’atteindre une{" "}
+          essentielles pour permettre à chaque élève d'atteindre une{" "}
           <strong>autonomie réelle</strong> en vol.
         </p>
         <p className="text-slate-800 mt-2">
@@ -411,11 +445,11 @@ export default function NosStagesPage() {
           <strong>
             responsabilisons progressivement le stagiaire sur sa propre sécurité
           </strong>
-          . L’objectif est que vous appreniez à{" "}
-          <strong>analyser l’aérologie</strong>, à{" "}
+          . L'objectif est que vous appreniez à{" "}
+          <strong>analyser l'aérologie</strong>, à{" "}
           <strong>prendre des décisions en vol</strong> et à{" "}
           <strong>identifier vos propres limites</strong>, pour devenir un
-          pilote capable d’évoluer en toute autonomie et en toute sécurité.
+          pilote capable d'évoluer en toute autonomie et en toute sécurité.
         </p>
         <p className="text-slate-800 mt-2">
           Grâce à un <strong>encadrement radio constant</strong>, des exercices
@@ -426,7 +460,7 @@ export default function NosStagesPage() {
           </strong>
           . Petit à petit, vous apprenez à{" "}
           <strong>anticiper les situations de vol</strong>, à gérer votre
-          trajectoire et à lire l’environnement aérien, tout en étant guidé par
+          trajectoire et à lire l'environnement aérien, tout en étant guidé par
           nos moniteurs expérimentés.
         </p>
         <p className="text-slate-800 mt-2">
@@ -480,7 +514,7 @@ export default function NosStagesPage() {
                   <span className="font-semibold">
                     Voiles Davinci Classic 2
                   </span>
-                  , une solide réputation d’ailes sécurisantes et performantes
+                  , une solide réputation d'ailes sécurisantes et performantes
                 </p>
                 <p className="mt-2">
                   -{" "}
@@ -542,14 +576,14 @@ export default function NosStagesPage() {
                   <li className="list-disc">
                     Clément Pons, moniteur principal, possède{" "}
                     <span className="font-semibold">
-                      16 années d’expérience en parapente
+                      16 années d'expérience en parapente
                     </span>
                   </li>
                   <li className="list-disc">
                     <span className="font-semibold">Biplace pédagogique :</span>{" "}
                     décollez avec le moniteur pour tester directement ses
                     conseils en vol, et lui laisser les commandes en cas
-                    d’inquiétude !
+                    d'inquiétude !
                   </li>
                   <li className="list-disc">
                     <span className="font-semibold">
@@ -566,13 +600,13 @@ export default function NosStagesPage() {
                       2 moniteurs certifiés pour les grands vols,
                     </span>{" "}
                     en liaison radio permanente avec vous : un au décollage et à
-                    un l’atterrissage
+                    un l'atterrissage
                   </li>
                   <li className="list-disc">
                     <span className="font-semibold">
                       Pédagogie efficace et adaptative :
                     </span>{" "}
-                    pas de blabla inutile, nous sommes à l’écoute des souhaits
+                    pas de blabla inutile, nous sommes à l'écoute des souhaits
                     et objectifs de chacun de vous
                   </li>
                   <li className="list-disc">
@@ -584,10 +618,10 @@ export default function NosStagesPage() {
                   </li>
                   <li className="list-disc">
                     <span className="font-semibold">
-                      L’ambiance est toujours très bonne
+                      L'ambiance est toujours très bonne
                     </span>
                     , élèves et moniteurs mangent ensemble la plupart du temps.
-                    C’est une aventure humaine qui se partage !
+                    C'est une aventure humaine qui se partage !
                   </li>
                 </ul>
               </DialogDescription>
@@ -595,8 +629,10 @@ export default function NosStagesPage() {
           </Dialog>
         </div>
       </section>
+
       {/* TESTIMONY */}
       <Testimonial />
+
       {/* BLOG */}
       <section className="mx-4 my-16 lg:mx-36 xl:mx-48 lg:my-24">
         <p className="mb-8 font-bold text-2xl relative before:content-[''] before:block before:w-1 pl-4 before:h-full before:bg-blue-600 before:absolute before:left-0 before:top-0">

@@ -5,6 +5,7 @@ import SliderPentesEcoles from "@/components/ui-self/sliders/SliderPentesEcoles"
 import SliderSitesGrandVols from "@/components/ui-self/sliders/SliderSitesGrandVols";
 import { Button } from "@/components/ui/button";
 import { ReserveButton } from "@/components/booking/ReserveButton";
+import { StageCalendarSection } from "./StageCalendarSection";
 import {
   Dialog,
   DialogContent,
@@ -42,7 +43,7 @@ export default function NosStagesPage() {
     <>
       {/* Hero Header with H1 */}
       <section>
-        <div className="bg-slate-900 h-[85svh] overflow-hidden relative flex items-end pb-24 md:pb-16 px-4 lg:px-36 xl:px-48">
+        <div className="bg-slate-900 h-[80svh] overflow-hidden relative flex items-end pb-24 md:pb-16 px-4 lg:px-36 xl:px-48">
           <Image
             src="/placeholder/hero-stages.webp"
             alt="Vol en parapente au dessus de la Valée de Serre Chevalier Briançon"
@@ -80,7 +81,7 @@ export default function NosStagesPage() {
         </div>
       </section>
       {/* LES TROIS STAGES */}
-      <section className="mx-4 my-24 lg:mx-36 xl:mx-48 lg:my-48 mt-8 lg:mt-16 lg:flex lg:gap-12 lg:items-center">
+      <section className="px-4 py-24 lg:px-36 xl:px-48 lg:py-16 lg:flex lg:gap-12 lg:items-center ">
         <Link
           href="/nos-stages/initiation"
           className="inline-block lg:w-1/2 h-[40vh] xl:h-[50vh] rounded-lg overflow-hidden"
@@ -136,7 +137,7 @@ export default function NosStagesPage() {
           </div>
         </div>
       </section>
-      <section className="mx-4 my-24 lg:mx-36 xl:mx-48 lg:my-48 lg:flex lg:flex-row-reverse lg:gap-12 lg:items-center">
+      <section className="px-4 py-24 lg:px-36 xl:px-48 lg:py-16 lg:flex lg:flex-row-reverse lg:gap-12 lg:items-center ">
         <Link
           href="/nos-stages/progression"
           className="inline-block lg:w-1/2 h-[40vh] xl:h-[50vh] rounded-lg overflow-hidden"
@@ -190,7 +191,7 @@ export default function NosStagesPage() {
           </div>
         </div>
       </section>
-      <section className="mx-4 my-24 lg:mx-36 xl:mx-48 lg:my-48 lg:flex lg:gap-12 lg:items-center">
+      <section className="px-4 py-24 lg:px-36 xl:px-48 lg:py-16 lg:flex lg:gap-12 lg:items-center ">
         <Link
           href="/nos-stages/autonomie"
           className="inline-block lg:w-1/2 h-[40vh] xl:h-[50vh] rounded-lg overflow-hidden"
@@ -244,8 +245,10 @@ export default function NosStagesPage() {
           </div>
         </div>
       </section>
+      {/* SECTION CALENDRIER CRÉNEAUX */}
+      <StageCalendarSection />
       {/* NAVETTE + AVANTAGES */}
-      <section className="mx-4 my-24 lg:mx-36 xl:mx-48 lg:my-48">
+      <section className="px-4 py-24 lg:px-36 xl:px-48 lg:py-16">
         <div className="block w-full space-y-4 mt-8 md:flex md:space-y-0 md:space-x-4">
           <Dialog>
             <DialogTrigger asChild>
@@ -387,7 +390,7 @@ export default function NosStagesPage() {
       {/* NOS MONITEURS */}
       <TeamSection title="Nos Moniteurs" />
       {/*  Pourquoi faire vos stages chez Serre Chevalier Parapente ?  */}
-      <section className="mx-4 my-24 lg:mx-36 xl:mx-48 lg:my-48">
+      <section className="px-4 py-24 lg:px-36 xl:px-48 lg:py-16">
         <h2 className="font-bold text-2xl text-slate-800">
           Pourquoi faire vos stages chez Serre Chevalier Parapente ?
         </h2>
@@ -429,7 +432,7 @@ export default function NosStagesPage() {
         </div>
       </section>
       {/* Est-ce que la pédagogie et la sécurité sont importantes pour Serre Chevalier Parapente ? */}
-      <section className="mx-4 my-24 lg:mx-36 xl:mx-48 lg:my-48">
+      <section className="px-4 py-24 lg:px-36 xl:px-48 lg:py-16">
         <h2 className="font-bold text-2xl text-slate-800">
           Est-ce que la pédagogie et la sécurité sont importantes pour Serre
           Chevalier Parapente ?
@@ -621,7 +624,7 @@ export default function NosStagesPage() {
       {/* TESTIMONY */}
       <Testimonial />
       {/* BLOG */}
-      <section className="mx-4 my-24 lg:mx-36 xl:mx-48 lg:my-48">
+      <section className="px-4 py-24 lg:px-36 xl:px-48 lg:py-16">
         <p className="mb-8 font-bold text-2xl relative before:content-[''] before:block before:w-1 pl-4 before:h-full before:bg-blue-600 before:absolute before:left-0 before:top-0">
           Nos derniers articles
         </p>

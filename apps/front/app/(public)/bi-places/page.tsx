@@ -33,7 +33,7 @@ export default function NosStagesPage() {
     <>
       {/* Hero Header with H1 */}
       <section>
-        <div className="bg-slate-900 h-[85svh] overflow-hidden relative flex items-end pb-24 md:pb-16 px-4 lg:px-36 xl:px-48">
+        <div className="bg-slate-900 h-[80svh] overflow-hidden relative flex items-end pb-24 md:pb-16 px-4 lg:px-36 xl:px-48">
           <Image
             src="/baptemes/photo-illustration-bapteme-bi_places.png"
             alt="Vol en parapente au dessus de la Valée de Serre Chevalier Briançon"
@@ -130,7 +130,7 @@ export default function NosStagesPage() {
           id="formules"
         ></div>
       </h2> */}
-      <section className="mx-4 my-24 lg:mx-36 xl:mx-48 lg:my-48 lg:flex lg:flex-row-reverse lg:gap-12 lg:items-center">
+      <section className="mx-4 my-24 lg:mx-36 xl:mx-48 lg:my-16 lg:flex lg:flex-row-reverse lg:gap-12 lg:items-center">
         <Link
           href="/reserver/bapteme?category=AVENTURE"
           className="inline-block lg:w-1/2 h-[40vh] xl:h-[50vh] rounded-lg overflow-hidden"

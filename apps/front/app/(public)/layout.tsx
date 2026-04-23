@@ -79,16 +79,6 @@ export default function PublicLayout({
                 setIsMenuOpened(false);
               }}
             >
-              <Link href="/" className="block w-full">
-                Accueil
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => {
-                setIsMenuOpened(false);
-              }}
-            >
               <Link href="/bi-places" className="block w-full">
                 Baptêmes
               </Link>
@@ -99,7 +89,7 @@ export default function PublicLayout({
               }}
             >
               <Link href="/nos-stages" className="block w-full">
-                Nos stages
+                Stages
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem

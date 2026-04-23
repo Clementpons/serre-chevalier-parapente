@@ -38,7 +38,7 @@ export default function NosStagesPage() {
     <>
       {/* Hero Header with H1 */}
       <section>
-        <div className="bg-slate-900 h-[85svh] overflow-hidden relative flex items-end pb-24 md:pb-16 px-4 lg:px-36 xl:px-48">
+        <div className="bg-slate-900 h-[80svh] overflow-hidden relative flex items-end pb-24 md:pb-16 px-4 lg:px-36 xl:px-48">
           <Image
             src="/placeholder/hero.webp"
             alt="Vol en parapente au dessus de la Valée de Serre Chevalier Briançon"

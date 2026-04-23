@@ -11,9 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   Clock,
   ArrowLeft,
-  ArrowRight,
   ShoppingCart,
-  Gift,
   Loader2,
   Check,
   Video,
@@ -56,30 +54,6 @@ interface ParticipantFormData {
   birthDate?: string;
 }
 
-// ─── Gift Voucher Banner ──────────────────────────────────────────────────────
-
-function GiftVoucherBanner() {
-  return (
-    <div className="flex items-center gap-3 justify-between bg-cyan-50 border border-cyan-200 rounded-xl px-4 py-3">
-      <div className="flex items-center gap-2 min-w-0">
-        <Gift className="w-5 h-5 text-cyan-600 shrink-0" />
-        <p className="text-sm text-cyan-800 font-medium">
-          Vous avez un bon cadeau ? Utilisez-le dès maintenant.
-        </p>
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <Link href="/utiliser-bon-cadeau">
-          <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700 gap-1 text-xs hidden sm:flex">
-            Utiliser mon bon cadeau <ArrowRight className="w-3 h-3" />
-          </Button>
-          <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700 text-xs sm:hidden">
-            Utiliser
-          </Button>
-        </Link>
-      </div>
-    </div>
-  );
-}
 
 // ─── Step Indicator ───────────────────────────────────────────────────────────
 
@@ -313,11 +287,7 @@ function BaptemeReservationPageContent() {
     setHasVideo(false);
     setShowForm(true);
     setValue("participantType", "self");
-    setTimeout(() => {
-      document
-        .getElementById("participant-form-separator")
-        ?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 100);
+    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   };
 
   const saveUserInfo = (data: ParticipantFormData) => {
@@ -419,7 +389,6 @@ function BaptemeReservationPageContent() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-8 pt-24 space-y-6">
-        <GiftVoucherBanner />
 
         {/* ── ÉTAPE 1 : calendrier (masqué en étape 2) ── */}
         {!showForm ? (
@@ -430,52 +399,42 @@ function BaptemeReservationPageContent() {
               </h2>
             </div>
 
-            {/* Category checkboxes */}
-            <div className="space-y-3">
-              <Label className="text-base font-semibold text-slate-800">Filtrer par formule</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {BAPTEME_CATEGORIES.map((cat) => {
-                  const isChecked = selectedCategories.includes(cat.id);
-                  const cfg = CATEGORY_CONFIG[cat.id];
-                  return (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => toggleCategory(cat.id)}
-                      className={cn(
-                        "flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all hover:shadow-md",
-                        isChecked
-                          ? `${cfg.borderClass} ${cfg.bgLight}`
-                          : "border-slate-200 bg-white hover:border-slate-300",
-                      )}
-                    >
-                      <div className={cn(
-                        "mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-all",
-                        isChecked ? `${cfg.dotClass} border-transparent` : "border-slate-300 bg-white",
-                      )}>
-                        {isChecked && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className={cn("font-semibold text-sm", isChecked ? cfg.textClass : "text-slate-700")}>
-                            {cat.name}
-                          </p>
-                          <span className={cn(
-                            "text-[10px] font-semibold px-1.5 py-0.5 rounded-full border",
-                            isChecked ? cfg.badgeClass : "bg-slate-100 text-slate-500 border-slate-200",
-                          )}>
-                            {cat.durationLabel}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-400 mt-1">
-                          {pricesLoading ? "..." : `${getBaptemePrice(cat.id)}€`}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+            {/* Category filters */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-semibold text-slate-600 shrink-0">Filtrer par formule</span>
+              {BAPTEME_CATEGORIES.map((cat) => {
+                const isChecked = selectedCategories.includes(cat.id);
+                const cfg = CATEGORY_CONFIG[cat.id];
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => toggleCategory(cat.id)}
+                    className={cn(
+                      "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors",
+                      isChecked
+                        ? `${cfg.bgLight} ${cfg.textClass}`
+                        : "bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700",
+                    )}
+                  >
+                    <span className={cn(
+                      "inline-flex items-center justify-center w-3.5 h-3.5 rounded shrink-0 transition-all",
+                      isChecked ? `${cfg.dotClass} border-transparent` : "border border-slate-300 bg-white",
+                    )}>
+                      {isChecked && <Check className="w-2 h-2 text-white" strokeWidth={3} />}
+                    </span>
+                    {cat.name}
+                    <span className="opacity-60 font-normal">{cat.durationLabel}</span>
+                  </button>
+                );
+              })}
             </div>
+            <p className="text-sm text-slate-500">
+              Vous avez un bon cadeau ?{" "}
+              <Link href="/utiliser-bon-cadeau" className="text-cyan-600 hover:underline font-medium">
+                Utilisez-le pour régler votre réservation
+              </Link>
+            </p>
 
             {/* Calendar */}
             <Card>
